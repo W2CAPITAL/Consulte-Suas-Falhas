@@ -121,7 +121,7 @@ export default {async fetch(request,env){
  const params=selectedSearch(perms,u,'p'),q=String(u.searchParams.get('q')||'').trim().slice(0,150),page=positivePage(u.searchParams.get('page'));
  if(params.error)return send({error:params.error},400);
  if(route==='/api/processes'&&request.method==='GET'){
-  const wh=[...params.wh],args=[...params.args];if(q){wh.push('(p.cliente LIKE ? OR p.processo LIKE ? OR p.payload LIKE ?)');args.push(...Array(3).fill('%'+q+'%'))}
+  const wh=[...params.wh],args=[...params.args];if(u.searchParams.get('errorsOnly')==='1')wh.push('p.qtd_erros>0');if(q){wh.push('(p.cliente LIKE ? OR p.processo LIKE ? OR p.payload LIKE ?)');args.push(...Array(3).fill('%'+q+'%'))}
   const clause=where(wh),cnt=await env.DB.prepare('SELECT COUNT(*) n FROM processes p'+clause).bind(...args).first();
   const rows=await env.DB.prepare('SELECT p.record_id,p.processo,p.cnj,p.cliente,p.escritorio,p.advogados,p.qtd_erros,n.status numopede FROM processes p LEFT JOIN numopede_checks n ON n.cnj=p.cnj'+clause+' ORDER BY p.qtd_erros DESC,p.record_id LIMIT 25 OFFSET ?').bind(...args,(page-1)*25).all();
   return send({total:cnt.n,page,items:rows.results.map(r=>({...r,advogados:arr(r.advogados).join(', ')}))});
