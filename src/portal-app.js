@@ -1,4 +1,4 @@
-export const PORTAL_APP = String.raw\`
+export const PORTAL_APP = String.raw`
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -263,4 +263,4 @@ $('topLogout').addEventListener('click',()=>logout().catch(e=>toast(e.message)))
 window.addEventListener('hashchange',()=>{const v=(location.hash||'').match(/^#\/([a-z]+)/);if(v&&v[1]!==S.view&&navItems.some(x=>x[0]===v[1]))changeView(v[1])});
 boot().catch(x=>toast(x.message));
 })();
-\`;
+`;
