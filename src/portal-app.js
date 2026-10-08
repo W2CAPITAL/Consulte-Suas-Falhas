@@ -7,13 +7,14 @@ const navItems=[['inicio','⌂','Início'],['resumo','▥','Resumo Executivo'],[
 const S={view:'inicio',company:'TODOS',lawyer:'TODOS',query:'',page:1,doc:null,docToken:0,auth:{authenticated:false},data:{},selectedId:null,refresh:0};
 const companies=['GM','HUGS','JVA','VINCULO A CONFIRMAR'];
 const lawyers=['MATHEUS','ANDRESSA','ERALDO','MAIKON','GILBERTO','ISAI','FABIO'];
-let loadingCount=0;
+let loadingCount=0,renderController;
+function reportError(err){if(err.name==='AbortError')return;toast(err.message)}
 function busy(state){loadingCount=Math.max(0,loadingCount+(state?1:-1));$('globalBusy').hidden=!loadingCount}
-async function api(url){busy(true);try{const r=await fetch(url,{credentials:'same-origin',cache:'no-store'});const v=await r.json().catch(()=>({error:'Resposta inválida do servidor'}));if(!r.ok)throw Error(v.error||'Falha HTTP '+r.status);return v}finally{busy(false)}}
+async function api(url){busy(true);try{const r=await fetch(url,{credentials:'same-origin',cache:'no-store',signal:renderController?.signal});const v=await r.json().catch(()=>({error:'Resposta inválida do servidor'}));if(!r.ok)throw Error(v.error||'Falha HTTP '+r.status);return v}finally{busy(false)}}
 async function post(url,body){busy(true);try{const r=await fetch(url,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const v=await r.json().catch(()=>({error:'Resposta inválida'}));if(!r.ok)throw Error(v.error||'Falha HTTP '+r.status);return v}finally{busy(false)}}
 function toast(txt){$('toast').textContent=txt;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,4100)}
 function root(html){$('content').innerHTML=html}
-function loading(title){root('<div class="card"><div class="card-head">'+esc(title)+'</div><div class="placeholder">Consultando a carteira jurídica no Cloudflare D1…</div></div>')}
+function loading(title){root('<div class="card"><div class="card-head">'+esc(title)+'</div><div class="placeholder">Carregando a auditoria…</div></div>')}
 function hero(title,subtitle='',extra=''){return '<div class="hero"><div><div class="overline">W1 SOLUÇÕES CAPITAIS · AUDITORIA JURÍDICA</div><h1 class="hero-title">'+esc(title)+'</h1><p class="hero-sub">'+esc(subtitle)+'</p></div><div class="toolbar">'+extra+'</div></div>'}
 function panel(title,content,opts=''){return '<section class="card '+opts+'"><div class="card-head"><span>'+esc(title)+'</span></div><div class="card-body">'+content+'</div></section>'}
 function kpi(value,label,icon='▣',color=''){return '<div class="stat"><div class="stat-icon">'+esc(icon)+'</div><div><div class="stat-value '+color+'">'+esc(value)+'</div><div class="stat-label">'+esc(label)+'</div></div></div>'}
@@ -30,7 +31,7 @@ function findCurrentDoc(docs,override){
  return docs.find(d=>d.doc_id==='resumo')||docs.find(d=>d.kind==='lawyer'&&d.scope===S.lawyer)||docs[0];
 }
 function filters(){return new URLSearchParams({company:S.company,lawyer:S.lawyer,q:S.query,page:String(S.page)})}
-function changeView(id){S.view=id;S.page=1;S.query='';S.selectedId=null;S.refresh++;S.docToken++;window.location.hash='/'+id;drawNav();render().catch(err=>{root(panel('Falha ao carregar', '<div class="note">'+esc(err.message)+'</div>'));toast(err.message)})}
+function changeView(id,options={}){S.view=id;S.page=1;S.query=options.query||'';S.selectedId=options.selectedId||null;S.refresh++;S.docToken++;window.location.hash='/'+id;drawNav();render().catch(err=>{if(err.name==='AbortError')return;root(panel('Falha ao carregar', '<div class="note">'+esc(err.message)+'</div>'));toast(err.message)})}
 function drawNav(){
  $('navMenu').innerHTML=navItems.map(([id,ic,title],i)=>(i===1||i===4||i===7?'<div class="menu-label">'+(i===1?'VISÃO GERAL':i===4?'INVESTIGAÇÃO':'DOCUMENTAÇÃO')+'</div>':'')+'<button type="button" class="nav '+(S.view===id?'active':'')+'" data-route="'+id+'" title="'+esc(title)+'"><span class="nav-icon">'+esc(ic)+'</span><span class="nav-text">'+esc(title)+'</span></button>').join('');
  $('pageTitle').textContent=(navItems.find(x=>x[0]===S.view)||navItems[0])[2];
@@ -46,6 +47,7 @@ async function boot(){
  drawNav();await render();
 }
 async function render(){
+ renderController?.abort();renderController=new AbortController();
  const view=S.view;loading('Carregando '+(navItems.find(x=>x[0]===view)?.[2]||view));
  if(view==='inicio'||view==='resumo')return showDashboard();
  if(view==='escritorios')return showOffices();
@@ -69,14 +71,24 @@ function chartPeople(overview){
  const max=Math.max(1,...rows.map(x=>x.atribuicoes));
  return rows.map((x,i)=>bar((i+1)+'º  '+x.nome,x.atribuicoes,max,i===0?'gold':'')).join('')||'<p class="placeholder">Sem atribuições no recorte.</p>';
 }
-function archiveCard(){return '<div class="note">Os números desta tela são da base D1 atual. Os PDFs históricos registram 1.791 processos auditados, 1.041 erros individualizados e 6.924 cobranças. Os universos não devem ser somados ou confundidos.</div>'}
+function chartFindings(summary){
+ const total=Number(summary.processos)||0,flagged=Math.max(0,Math.min(total,Number(summary.comErro)||0));
+ const degrees=total?flagged/total*360:0;
+ return '<div class="donut-wrap"><div class="donut" role="img" aria-label="'+num(flagged)+' de '+num(total)+' processos com apontamentos" style="background:conic-gradient(#c34850 0deg '+degrees+'deg,#0f4b77 '+degrees+'deg 360deg)"><div class="donut-label">'+(total?Math.round(flagged/total*100):0)+'%<small>com apontamentos</small></div></div><div class="legend"><div><span>Com apontamentos</span><strong>'+num(flagged)+'</strong></div><div><span>Sem apontamentos</span><strong>'+num(total-flagged)+'</strong></div><div><span>Total no recorte</span><strong>'+num(total)+'</strong></div></div></div>';
+}
+function processFilters(){
+ const available=(items,key)=>items.filter(x=>S.auth.role==='admin'||(S.auth[key]||[]).includes('*')||(S.auth[key]||[]).includes(x));
+ const options=(items,value)=>'<option value="TODOS">Todos</option>'+items.map(x=>'<option '+(value===x?'selected':'')+' value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+ return '<div class="filter-fields"><label>Escritório<select class="select" data-filter="company">'+options(available(companies,'companies'),S.company)+'</select></label><label>Advogado<select class="select" data-filter="lawyer">'+options(available(lawyers,'lawyers'),S.lawyer)+'</select></label></div>';
+}
+function archiveCard(){return '<details class="source-note"><summary>Origem dos indicadores</summary>Os números desta tela são da base D1 atual. Os PDFs históricos registram 1.791 processos auditados, 1.041 erros individualizados e 6.924 cobranças. Os universos não devem ser somados ou confundidos.</details>'}
 async function showDashboard(){
  const {summary,overview}=await dataCore();
- const k='<div class="stats">'+kpi(num(summary.processos),'REGISTROS NO BANCO D1','▣')+kpi(num(summary.comErro),'PROCESSOS COM APONTAMENTOS','⚠','red')+kpi(num(summary.mensagens),'MENSAGENS DISPONÍVEIS','✉')+kpi(num(summary.numopedeCandidatos),'CANDIDATOS NUMOPEDE','⚖','gold')+kpi(num(summary.cnjs),'CNJS IDENTIFICADOS NO D1','◉')+'</div>';
+ const k='<div class="stats">'+kpi(num(summary.processos),'PROCESSOS NA CARTEIRA','▣')+kpi(num(summary.comErro),'PROCESSOS COM APONTAMENTOS','⚠','red')+kpi(num(summary.mensagens),'MENSAGENS DISPONÍVEIS','✉')+kpi(num(summary.numopedeCandidatos),'CANDIDATOS NUMOPEDE','⚖','gold')+kpi(num(summary.cnjs),'CNJS IDENTIFICADOS','◉')+'</div>';
  const suspect=summary.mensagens<summary.totalMensagensPrevistas?'<div class="note">Mensagens sincronizadas: '+num(summary.mensagens)+' de '+num(summary.totalMensagensPrevistas)+'. A ausência de uma conversa nesta versão não significa ausência de prova.</div>':'';
- const html=hero('Visão Geral da Auditoria','Processos, evidências e encaminhamentos · GM | HUGS | JVA','<button class="action gold" data-route="dossies">▣ Dossiês HTML completos</button>')+k+archiveCard()+suspect+'<div class="dashboard-cols">'+panel('Processos vinculados por escritório',chartOffices(overview))+panel('Advogados com mais apontamentos',chartPeople(overview))+panel('Critérios do relatório','<div class="donut-wrap"><div class="donut" style="background:conic-gradient(#0f4b77 0deg 235deg,#d29f48 235deg 306deg,#c34850 306deg 360deg)"><div class="donut-label">'+num(summary.processos)+'<small>registros D1</small></div></div><div class="legend"><div><b>Auditoria documental</b></div><div>Erros: <strong>'+num(summary.comErro)+'</strong></div><div>CNJs: <strong>'+num(summary.cnjs)+'</strong></div><div>NUMOPEDE: <strong>'+num(summary.numopedeCandidatos)+'</strong></div></div></div>')+'</div>';
+ const html=hero('Visão Geral da Auditoria','Processos, evidências e encaminhamentos · GM | HUGS | JVA','<button class="action gold" data-route="dossies">▣ Dossiês HTML completos</button>')+k+archiveCard()+suspect+'<div class="dashboard-cols">'+panel('Processos vinculados por escritório',chartOffices(overview))+panel('Advogados com mais apontamentos',chartPeople(overview))+panel('Processos com apontamentos',chartFindings(summary))+'</div>'+panel('Resumo executivo completo','<div id="sourcePreview"></div>');
  root(html);
- await showPreview('resumo','sourcePreview',true,'');
+ await chooseDocument('resumo','sourcePreview',true).catch(reportError);
 }
 async function showPreview(id,slot,full,append){
  let parent=$(slot);
@@ -106,7 +118,7 @@ async function showLawyers(){
  if(!allowed.includes(S.lawyer))S.lawyer=allowed[0]||'TODOS';
  const rank=new Map((overview.lawyers||[]).map(x=>[x.nome,x]));
  const people=allowed.map((l,i)=>'<button class="person '+(S.lawyer===l?'selected':'')+'" data-lawyer="'+esc(l)+'"><span class="avatar">'+l[0]+'</span><span style="min-width:0;flex:1"><strong>'+esc(l)+'</strong><small>'+num(rank.get(l)?.processos||0)+' processos listados</small></span><span class="chip '+(i===0?'amber':'navy')+'">'+num(rank.get(l)?.atribuicoes||0)+' atrib.</span></button>').join('');
- root(hero('Advogados — visão individual','Dados por profissional com acesso e documentos originais separados.')+'<div class="two-cols">'+panel('Escolha do advogado','<div class="person-grid">'+people+'</div>')+panel('Resumo de '+S.lawyer,'<div id="lawyerStats" class="placeholder">Calculando registros…</div>')+'</div>'+panel('Processos vinculados · '+S.lawyer,'<div id="lawyerCases"></div>')+panel('Dossiê completo — '+S.lawyer,'<div id="lawyerDoc"></div>'));
+ root(hero('Advogados — visão individual','Processos, apontamentos e dossiê completo de cada profissional.')+'<div class="two-cols">'+panel('Escolha do advogado','<div class="person-grid">'+people+'</div>')+panel('Resumo de '+S.lawyer,'<div id="lawyerStats" class="placeholder">Calculando registros…</div>')+'</div>'+panel('Processos vinculados · '+S.lawyer,'<div id="lawyerCases"></div>')+panel('Dossiê completo — '+S.lawyer,'<div id="lawyerDoc"></div>'));
  const p=rank.get(S.lawyer)||{};
  $('lawyerStats').innerHTML='<div class="stats" style="grid-template-columns:repeat(2,1fr)">'+kpi(num(p.processos),'PROCESSOS VINCULADOS','▣')+kpi(num(p.atribuicoes),'APONTAMENTOS EM REGISTROS','⚠','red')+'</div><div class="note">Uma atribuição processual não confirma autoria direta ou culpa disciplinar.</div>';
  const d=await api('/api/processes?'+new URLSearchParams({company:'TODOS',lawyer:S.lawyer,page:'1'}));
@@ -121,25 +133,25 @@ function pager(d){return '<div class="pagination"><button class="action secondar
 async function showProcesses(errorsOnly){
  const title=errorsOnly?'Erros Individualizados':'Todos os Processos';
  const data=await api('/api/processes?'+filters()+(errorsOnly?'&errorsOnly=1':''));
- root(hero(title,'Fonte: carteira D1; filtros de acesso aplicados no servidor.')+'<div class="card"><div class="card-head"><span>Carteira jurídica · '+num(data.total)+' registros</span></div><div class="card-body"><div class="toolbar"><input id="localSearch" class="input search" placeholder="Buscar por CNJ, cliente, advogado ou trecho" value="'+esc(S.query)+'"><button class="action" data-act="search">Buscar</button><button class="action secondary" data-act="clear">Limpar</button></div>'+tableProcesses(data)+pager(data)+'</div></div>'+panel('Ficha detalhada do processo','<div id="processDetail"></div>'));
- if(data.items.length)await detailProcess(S.selectedId&&data.items.some(x=>x.record_id===S.selectedId)?S.selectedId:data.items[0].record_id);
+ root(hero(title,'Consulte a carteira, filtre por escritório ou advogado e veja os apontamentos.')+'<div class="card"><div class="card-head"><span>Carteira jurídica · '+num(data.total)+' registros</span></div><div class="card-body">'+processFilters()+'<div class="toolbar"><input id="localSearch" class="input search" placeholder="Buscar por CNJ, cliente, advogado ou trecho" value="'+esc(S.query)+'"><button class="action" data-act="search">Buscar</button><button class="action secondary" data-act="clear">Limpar</button></div>'+tableProcesses(data)+pager(data)+'</div></div>'+panel('Ficha detalhada do processo','<div id="processDetail"></div>'));
+ if(S.selectedId||data.items.length)await detailProcess(S.selectedId||data.items[0].record_id);
  else $('processDetail').textContent='Nenhum processo encontrado.';
 }
 async function detailProcess(id,slot='processDetail'){
- S.selectedId=Number(id);const data=await api('/api/process/'+encodeURIComponent(id));
+ S.selectedId=Number(id);const target=$(slot);if(!target)return;const token=Symbol();target.requestToken=token;const data=await api('/api/process/'+encodeURIComponent(id));if(!target.isConnected||target.requestToken!==token)return;
  const p=data.payload||{},errs=Array.isArray(p.erros_detalhados)?p.erros_detalhados:[];
  const list=errs.length?errs.map((e,i)=>'<div class="issue"><b>#'+(i+1)+' · '+esc(e.tipo)+'</b><p>'+esc(e.evidencia)+'</p><p><b>Providência:</b> '+esc(e.providencia)+'</p></div>').join(''):'<div class="note">A classificação de erros está na base do processo; abra o dossiê original para o contexto detalhado.</div>';
  const cnj=String(data.cnj||'').replace(/\D/g,'');
  $(slot).innerHTML='<div class="hero"><div><h2 class="hero-title">'+esc(data.processo)+'</h2><div class="hero-sub">'+esc(data.cliente)+' · '+esc(data.escritorio)+' · '+esc(Array.isArray(data.advogados)?data.advogados.join(', '):data.advogados)+'</div></div><span>'+badge(data.qtd_erros+' apontamentos')+'</span></div><div class="two-cols"><div><h3 class="section-heading">Erros e evidências</h3>'+list+'</div><div><h3 class="section-heading">Resumo do processo</h3><div class="case-summary"><p><b>Último andamento:</b> '+esc(p['Último andamento']||'Não informado')+'</p><p><b>Providência esperada:</b> '+esc(p['O que deveria ter sido feito']||'Conferir documento original')+'</p><p><b>NUMOPEDE:</b> '+esc(data.numopede_status||'Sem candidato cadastrado; consulta externa pode estar pendente')+'</p>'+(cnj.length===20?'<a target="_blank" rel="noopener noreferrer" href="https://comunica.pje.jus.br/consulta?numeroProcesso='+encodeURIComponent(cnj)+'">Abrir Comunica PJe / DJEN ↗</a>':'')+'</div><h3 class="section-heading">Minha análise</h3><div id="reviewPanel"></div><label class="field" for="reviewStatus">Situação</label><select class="select" id="reviewStatus"><option value="EM_ANALISE">Em análise</option><option value="RECONHECIDO">Reconhecido</option><option value="CONTESTADO">Contestado</option><option value="CORRIGIDO">Corrigido</option></select><label class="field" for="reviewNote">Manifestação</label><textarea class="input" id="reviewNote" maxlength="1800"></textarea><button class="action" data-act="saveReview" data-id="'+id+'">Salvar análise com histórico</button></div></div>';
- if(cnj==='50006280520258130481'&&S.auth.canConfigure){const holder=document.createElement('section');holder.className='card';holder.innerHTML='<div class="card-head">Dossiê forense original de Danilo · HTML</div><div id="daniloOriginal"></div>';$(slot).appendChild(holder);chooseDocument('danilo','daniloOriginal',true).catch(e=>toast(e.message));}
- try{const r=await api('/api/review?record_id='+id);$('reviewPanel').innerHTML=r.items.length?r.items.map(x=>'<div class="note"><b>'+esc(x.username)+'</b> · '+badge(x.status)+'<p>'+esc(x.note||'Sem comentário')+'</p></div>').join(''):'<div class="note">Nenhuma revisão registrada ainda.</div>'}catch(e){$('reviewPanel').textContent=e.message}
+ if(cnj==='50006280520258130481'&&S.auth.canConfigure){const holder=document.createElement('section');holder.className='card';holder.innerHTML='<div class="card-head">Dossiê forense original de Danilo · HTML</div><div id="daniloOriginal"></div>';$(slot).appendChild(holder);chooseDocument('danilo','daniloOriginal',true).catch(reportError);}
+ try{const r=await api('/api/review?record_id='+id);if(!target.isConnected||target.requestToken!==token)return;$('reviewPanel').innerHTML=r.items.length?r.items.map(x=>'<div class="note"><b>'+esc(x.username)+'</b> · '+badge(x.status)+'<p>'+esc(x.note||'Sem comentário')+'</p></div>').join(''):'<div class="note">Nenhuma revisão registrada ainda.</div>'}catch(e){if(e.name!=='AbortError'&&target.isConnected&&target.requestToken===token&&$('reviewPanel'))$('reviewPanel').textContent=e.message}
 }
 async function showMessages(){
  const d=await api('/api/messages?'+filters());
  root(hero('Todas as Mensagens','Registros disponíveis no banco; textos originais para conferência.')+'<div class="toolbar"><input id="localSearch" class="input search" placeholder="Nome, CNJ, remetente ou palavra" value="'+esc(S.query)+'"><button class="action" data-act="search">Buscar</button><button class="action secondary" data-act="clear">Limpar</button></div><div class="two-cols">'+panel('Conversas · '+num(d.total)+' mensagens','<div class="chat-list">'+d.items.map(x=>'<div class="chat-row" data-message="'+x.message_id+'"><b>'+esc(x.speaker||'Remetente não identificado')+'</b><small>'+esc(x.date_text)+' · '+esc(x.source)+'</small><div>'+esc(x.body.slice(0,135))+'</div></div>').join('')+'</div>'+pager(d))+panel('Mensagem completa','<div id="messageDetail"></div>')+'</div>');
  if(d.items.length)await detailMessage(d.items[0].message_id);
 }
-async function detailMessage(id){const x=await api('/api/message/'+encodeURIComponent(id));$('messageDetail').innerHTML='<h3>'+esc(x.speaker||'Remetente')+'</h3><small>'+esc(x.date_text)+' '+esc(x.time_text)+' · Origem: '+esc(x.source)+'</small><div class="chat-bubble" style="margin:16px 0">'+esc(x.body)+'</div><div class="note">Registro extraído da base vinculada; verifique a conversa original antes de utilizá-lo como prova.</div>'}
+async function detailMessage(id){const target=$('messageDetail');if(!target)return;const token=Symbol();target.requestToken=token;const x=await api('/api/message/'+encodeURIComponent(id));if(!target.isConnected||target.requestToken!==token)return;target.innerHTML='<h3>'+esc(x.speaker||'Remetente')+'</h3><small>'+esc(x.date_text)+' '+esc(x.time_text)+' · Origem: '+esc(x.source)+'</small><div class="chat-bubble" style="margin:16px 0">'+esc(x.body)+'</div><div class="note">Registro extraído da base vinculada; verifique a conversa original antes de utilizá-lo como prova.</div>'}
 async function showNumopede(){
  const d=await api('/api/numopede?'+filters());
  const table='<div class="table-scroll"><table class="table"><thead><tr><th>CNJ</th><th>Cliente</th><th>Advogado</th><th>Status</th></tr></thead><tbody>'+d.items.map(x=>'<tr data-process="'+x.record_id+'"><td>'+esc(x.processo)+'</td><td>'+esc(x.cliente)+'</td><td>'+esc(x.advogados)+'</td><td>'+badge(x.status)+'</td></tr>').join('')+'</tbody></table></div>';
@@ -164,12 +176,12 @@ async function showLibrary(){
 }
 async function readDocument(id,host,full=true){
  const target=$(host);if(!target)return;
- const token=++S.docToken;
- target.innerHTML='<div class="doc-meta"><b>Carregando dossiê HTML original…</b><small class="doc-count"></small><a class="action secondary" href="/html/'+encodeURIComponent(id)+'" target="_blank" rel="noopener noreferrer">Abrir HTML completo ↗</a></div><div class="doc-sheet"><div class="placeholder">Lendo páginas do Cloudflare D1…</div></div>';
+ const token=Symbol();target.readToken=token;
+ target.innerHTML='<div class="doc-meta"><b>Carregando dossiê HTML original…</b><small class="doc-count"></small><a class="action secondary" href="/html/'+encodeURIComponent(id)+'" target="_blank" rel="noopener noreferrer">Abrir HTML completo ↗</a></div><div class="doc-sheet"><div class="placeholder">Carregando páginas do dossiê…</div></div>';
  let next=1,total=0,title=id;
- while(next&&token===S.docToken){
+ while(next&&target.isConnected&&token===target.readToken){
   const data=await api('/api/dossier/'+encodeURIComponent(id)+'?start='+next+'&limit='+(full?'8':'2'));
-  if(token!==S.docToken||!$(host))return;
+  if(token!==target.readToken||!target.isConnected)return;
   title=data.doc.title;
   const shell=$(host);
   const sheet=shell.querySelector('.doc-sheet');
@@ -179,7 +191,13 @@ async function readDocument(id,host,full=true){
    const section=document.createElement('section');section.className='pdf-page';
    const header=document.createElement('div');header.className='page-number';header.textContent='PÁGINA '+page.page_num+' / '+data.doc.pages_imported;
    const txt=document.createElement('pre');txt.className='pdf-text';txt.textContent=page.page_text;
-   section.append(header,txt);nodes.appendChild(section);total++;
+   section.append(header);
+   if(page.has_visual){
+    section.classList.add('has-visual');
+    const img=document.createElement('img');img.className='page-visual';img.src='/html/'+encodeURIComponent(id)+'/page/'+Number(page.page_num)+'.svg';img.loading='lazy';img.decoding='async';img.alt='Página '+page.page_num+' do dossiê, com a diagramação original';
+    img.addEventListener('error',()=>{img.hidden=true;transcript.open=true},{once:true});
+    const transcript=document.createElement('details');transcript.className='page-transcript';const label=document.createElement('summary');label.textContent='Texto da página';transcript.append(label,txt);section.append(img,transcript);
+   }else section.append(txt);nodes.appendChild(section);total++;
   }
   sheet.appendChild(nodes);
   const titleEl=shell.querySelector('.doc-meta b'),count=shell.querySelector('.doc-count');
@@ -191,7 +209,7 @@ async function readDocument(id,host,full=true){
 }
 async function showReports(){
  const {summary,overview}=await dataCore();
- root(hero('Relatórios e Analytics','Comparações e resumo documental, sem gráficos com valores inventados.')+'<div class="stats">'+kpi(num(summary.processos),'REGISTROS D1','▣')+kpi(num(summary.comErro),'COM FALHAS','⚠','red')+kpi(num(summary.numopedeCandidatos),'CANDIDATOS NUMOPEDE','⚖')+'</div><div class="two-cols">'+panel('Distribuição por escritório',chartOffices(overview))+panel('Ranking de apontamentos',chartPeople(overview))+'</div>'+panel('Resumo executivo original convertido em HTML','<div id="reportsDoc"></div>'));
+ root(hero('Relatórios e Analytics','Comparações e resumo documental, sem gráficos com valores inventados.')+'<div class="stats">'+kpi(num(summary.processos),'PROCESSOS NA CARTEIRA','▣')+kpi(num(summary.comErro),'COM FALHAS','⚠','red')+kpi(num(summary.numopedeCandidatos),'CANDIDATOS NUMOPEDE','⚖')+'</div><div class="two-cols">'+panel('Distribuição por escritório',chartOffices(overview))+panel('Ranking de apontamentos',chartPeople(overview))+'</div>'+panel('Resumo executivo original convertido em HTML','<div id="reportsDoc"></div>'));
  await chooseDocument('resumo','reportsDoc',true);
 }
 async function showVideos(){
@@ -238,30 +256,32 @@ async function saveReview(id){
 async function logout(){await post('/api/auth/logout',{});location.hash='';location.reload()}
 async function onAction(el){
  const act=el.dataset.act;
- if(act==='search'){S.query=$('localSearch')?.value?.trim()||'';S.page=1;return render()}
- if(act==='clear'){S.query='';S.page=1;return render()}
+ if(act==='search'){S.query=$('localSearch')?.value?.trim()||'';S.page=1;S.selectedId=null;return render()}
+ if(act==='clear'){S.query='';S.page=1;S.selectedId=null;return render()}
  if(act==='saveReview')return saveReview(el.dataset.id);
  if(act==='logout')return logout();
  if(act==='createUser')return createUser();
 }
 document.addEventListener('click',e=>{
  const nav=e.target.closest('[data-route]');if(nav){e.preventDefault();return changeView(nav.dataset.route)}
- const company=e.target.closest('[data-company]');if(company){S.company=company.dataset.company;S.doc=null;return render().catch(x=>toast(x.message))}
- const lawyer=e.target.closest('[data-lawyer]');if(lawyer){S.lawyer=lawyer.dataset.lawyer;S.doc=null;return render().catch(x=>toast(x.message))}
+ const company=e.target.closest('[data-company]');if(company){S.company=company.dataset.company;S.doc=null;return render().catch(reportError)}
+ const lawyer=e.target.closest('[data-lawyer]');if(lawyer){S.lawyer=lawyer.dataset.lawyer;S.doc=null;return render().catch(reportError)}
  const doc=e.target.closest('[data-doc]');if(doc){
   S.doc=doc.dataset.doc;document.querySelectorAll('.doc-choice').forEach(x=>x.classList.toggle('active',x.dataset.doc===S.doc));
-  return readDocument(S.doc,'docViewer',true).catch(x=>toast(x.message))
+  return readDocument(S.doc,'docViewer',true).catch(reportError)
  }
- const process=e.target.closest('[data-process]');if(process){if($('processDetail'))return detailProcess(process.dataset.process).catch(x=>toast(x.message));S.selectedId=Number(process.dataset.process);return changeView('processos')}
- const msg=e.target.closest('[data-message]');if(msg)return detailMessage(msg.dataset.message).catch(x=>toast(x.message));
- const page=e.target.closest('[data-paging]');if(page){S.page=Math.max(1,S.page+Number(page.dataset.paging));return render().catch(x=>toast(x.message))}
- const a=e.target.closest('[data-act]');if(a)return onAction(a).catch(x=>toast(x.message));
+ const process=e.target.closest('[data-process]');if(process){if($('processDetail'))return detailProcess(process.dataset.process).catch(reportError);return changeView('processos',{selectedId:Number(process.dataset.process)})}
+ const msg=e.target.closest('[data-message]');if(msg)return detailMessage(msg.dataset.message).catch(reportError);
+ const page=e.target.closest('[data-paging]');if(page){S.page=Math.max(1,S.page+Number(page.dataset.paging));S.selectedId=null;return render().catch(reportError)}
+ const a=e.target.closest('[data-act]');if(a)return onAction(a).catch(reportError);
 });
+document.addEventListener('change',e=>{const key=e.target.dataset.filter;if(key){S[key]=e.target.value;S.page=1;S.selectedId=null;render().catch(reportError)}});
+$('content').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='localSearch'){onAction({dataset:{act:'search'}}).catch(reportError)}});
 $('loginButton').addEventListener('click',login);
 $('password').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
-$('globalSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){S.company='TODOS';S.lawyer='TODOS';S.query=e.target.value.trim();changeView('processos')}});
-$('topLogout').addEventListener('click',()=>logout().catch(e=>toast(e.message)));
+$('globalSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){S.company='TODOS';S.lawyer='TODOS';changeView('processos',{query:e.target.value.trim()})}});
+$('topLogout').addEventListener('click',()=>logout().catch(reportError));
 window.addEventListener('hashchange',()=>{const v=(location.hash||'').match(/^#\/([a-z]+)/);if(v&&v[1]!==S.view&&navItems.some(x=>x[0]===v[1]))changeView(v[1])});
-boot().catch(x=>toast(x.message));
+boot().catch(reportError);
 })();
 `;

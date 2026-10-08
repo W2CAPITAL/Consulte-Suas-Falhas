@@ -9,9 +9,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 a{color:#0b4d83;text-decoration:none}a:hover{text-decoration:underline}
 .shell{display:flex;min-height:100vh}
 .sidebar{width:204px;flex:0 0 204px;background:linear-gradient(175deg,#06192b,#06283e 65%,#081e30);border-right:3px solid #bf954f;color:#e7f0f6;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;z-index:20;box-shadow:5px 0 28px #09233626}
-.logo{padding:19px 12px 14px;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border-bottom:1px solid #365064}
-.logo-shield{width:62px;height:67px;display:grid;place-items:center;color:#e9b454;font:46px/1 Georgia,serif;background:linear-gradient(#15364d,#0a2134);border:2px solid #e0ab52;clip-path:polygon(50% 0%,100% 15%,100% 74%,50% 100%,0 74%,0 15%);margin-bottom:9px}
-.logo strong{font:700 15px/1.1 Georgia,serif;letter-spacing:.06em}.logo small{font-size:9px;color:#f4d59c;letter-spacing:.09em;margin-top:6px}
+.logo{padding:15px 12px;min-height:90px;display:flex;flex-direction:row;gap:10px;align-items:center;justify-content:center;text-align:left;border-bottom:1px solid #365064}
+.logo-shield{width:41px;height:47px;flex-shrink:0;display:grid;place-items:center;color:#e9b454;font:30px/1 Georgia,serif;background:linear-gradient(#15364d,#0a2134);border:2px solid #e0ab52;clip-path:polygon(50% 0%,100% 15%,100% 74%,50% 100%,0 74%,0 15%);margin-bottom:9px}
+.logo strong{font:700 13px/1.3 "Segoe UI",Arial,sans-serif;letter-spacing:.06em}.logo small{display:none;font-size:9px;color:#f4d59c;letter-spacing:.09em;margin-top:6px}
 .menu{padding:12px 9px;overflow:auto;flex:1;scrollbar-width:thin}
 .menu-label{font-size:9px;color:#8ea8c0;letter-spacing:.15em;padding:11px 10px 7px;font-weight:800}
 .nav{width:100%;text-align:left;display:flex;gap:10px;align-items:center;min-height:35px;margin:2px 0;padding:8px 9px;border-radius:7px;color:#e0eaf4;border:1px solid transparent;background:none;transition:.15s}
@@ -27,19 +27,19 @@ a{color:#0b4d83;text-decoration:none}a:hover{text-decoration:underline}
 .hamburger{display:none}
 .page{padding:19px 20px 60px;max-width:1690px;margin:0 auto}
 .hero{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:15px}
-.hero-title{font:700 25px/1.2 Georgia,serif;margin:0;color:#0d2b43}.hero-sub{margin:4px 0 0;color:#688398;font-size:12px}.overline{font-size:10px;font-weight:800;color:#a77e36;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+.hero-title{font:750 25px/1.2 "Segoe UI",Arial,sans-serif;margin:0;color:#0d2b43}.hero-sub{margin:4px 0 0;color:#688398;font-size:12px}.overline{font-size:10px;font-weight:800;color:#a77e36;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
 .action{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:8px 11px;background:#0d3652;color:#fff;border:1px solid #0d3652;font-weight:700}
 .action:hover{background:#185275;color:#fff;text-decoration:none}.action.secondary{background:#fff;border-color:#c5d4e0;color:#0c3856}.action.gold{background:#dcac54;color:#172b3c;border-color:#dcac54}.action.red{background:#ba2732;border-color:#ba2732}
 .input,.select{padding:9px 12px;border:1px solid #cbd6df;border-radius:6px;background:#fff;color:#123047;min-width:130px;max-width:100%}.input.search{min-width:260px;flex:1}
 .card{background:var(--panel);border:1px solid #cfdae3;border-radius:8px;box-shadow:0 2px 10px #213b5110;min-width:0;overflow:hidden}
-.card-head{background:#0d3048;color:#fff;min-height:36px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 13px;font-weight:800;font-size:13px}
+.card-head{background:#f7f9fc;color:#102f49;border-bottom:1px solid #e1e8ef;min-height:36px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 13px;font-weight:800;font-size:13px}
 .card-head .minor{font-weight:500;color:#aec4d6;font-size:11px}
 .card-body{padding:14px}
 .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:12px}
-.stat{min-height:88px;background:#fff;border:1px solid #d5dfe7;border-radius:8px;padding:13px 10px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 5px #112e480d}
-.stat-icon{font:26px/1 Georgia,serif;color:#0c3454;flex:0 0 34px;text-align:center}
-.stat-value{font:700 clamp(23px,2.4vw,34px)/1 Georgia,serif;color:#0d2b4a;letter-spacing:-.035em}
+.stat{min-height:88px;justify-content:center;text-align:center;background:#fff;border:1px solid #d5dfe7;border-radius:8px;padding:13px 10px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 5px #112e480d}
+.stat-icon{display:none;font:26px/1 Georgia,serif;color:#0c3454;flex:0 0 34px;text-align:center}
+.stat-value{font:750 clamp(23px,2.4vw,34px)/1 "Segoe UI",Arial,sans-serif;color:#0d2b4a;letter-spacing:-.035em}
 .stat-value.red{color:#c61d28}.stat-value.gold{color:#b97f1e}
 .stat-label{font-size:10px;color:#58718a;margin-top:7px;line-height:1.2}
 .dashboard-cols{display:grid;grid-template-columns:1.04fr .95fr 1fr;gap:12px}.two-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}.span-2{grid-column:span 2}.span-3{grid-column:span 3}
@@ -47,7 +47,8 @@ a{color:#0b4d83;text-decoration:none}a:hover{text-decoration:underline}
 .donut-wrap{display:flex;gap:18px;align-items:center;min-height:210px}.donut{width:175px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;flex-shrink:0}.donut:after{content:"";position:absolute;background:#fff;inset:34px;border-radius:50%}.donut-label{z-index:1;position:relative;text-align:center;font:700 25px Georgia,serif}.donut-label small{display:block;font:11px system-ui;color:#7a90a2}.legend{flex:1;font-size:12px}.legend div{display:flex;justify-content:space-between;gap:10px;margin:9px 0}
 .chip{display:inline-block;font-size:10px;padding:3px 8px;border-radius:4px;font-weight:750;background:#e5eef7;color:#144b72}.chip.red{background:#ffe2e2;color:#b9212d}.chip.amber{background:#fff0d9;color:#a2600c}.chip.green{background:#d8f3e7;color:#146c4c}.chip.navy{background:#dceaf3;color:#0a3556}
 .candidate-note,.note{border-left:3px solid #c6994a;background:#fffaf0;padding:11px 13px;color:#63533d;font-size:12px;margin:10px 0;border-radius:2px}
-.section-heading{font:700 18px Georgia,serif;color:#10304a;margin:3px 0 12px}
+.source-note{font-size:11px;color:#688098;margin:8px 0 14px}.source-note summary{cursor:pointer;font-weight:650}
+.section-heading{font:750 18px "Segoe UI",Arial,sans-serif;color:#10304a;margin:3px 0 12px}
 .table-scroll{max-width:100%;overflow:auto}.table{border-collapse:collapse;width:100%;font-size:11px;text-align:left;white-space:nowrap}
 .table th{position:sticky;top:0;background:#e7eff6;color:#123c59;padding:9px;border-bottom:1px solid #becfdd;text-transform:uppercase;font-size:10px;letter-spacing:.035em}
 .table td{padding:9px;border-bottom:1px solid #e4ecf1;max-width:310px;overflow:hidden;text-overflow:ellipsis}.table tbody tr{cursor:pointer}.table tbody tr:hover{background:#edf5fb}.table td.wrap{white-space:normal}
@@ -66,6 +67,7 @@ a{color:#0b4d83;text-decoration:none}a:hover{text-decoration:underline}
 .doc-index{max-height:78vh;overflow:auto}.doc-choice{display:block;width:100%;text-align:left;padding:11px 12px;background:#fff;border:0;border-bottom:1px solid #e4ecf2;color:#153b56}.doc-choice:hover{background:#f1f7fb}.doc-choice.active{background:#e9f3fc;border-left:4px solid #c4974b;font-weight:750}.doc-choice small{display:block;color:#7893a6;font-weight:500;font-size:10px}
 .doc-sheet{max-height:75vh;overflow:auto;background:#ebeff4;padding:18px}
 .pdf-page{background:white;border:1px solid #d5dce5;max-width:920px;margin:0 auto 18px;padding:29px 24px 35px;box-shadow:0 5px 13px #263b5417;min-height:240px}
+.pdf-page.has-visual{padding:0}.pdf-page.has-visual .page-number{margin:0;padding:10px 14px;background:#f8fafc;font-size:11px;border-bottom:1px solid #dde5ed}.page-visual{display:block;width:100%;height:auto}.page-transcript{padding:12px 16px}.page-transcript summary{cursor:pointer;color:#46657d}.filter-fields{display:flex;gap:12px;flex-wrap:wrap}.filter-fields label{display:flex;flex-direction:column;gap:4px;font-weight:650;font-size:11px}.filter-fields select{min-width:170px}
 .pdf-page .page-number{font-weight:800;color:#b18a49;border-bottom:2px solid #d2b072;padding-bottom:8px;margin-bottom:16px}
 .pdf-text{margin:0;font:11.3px/1.45 "Courier New",Consolas,monospace;color:#13263a;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:4}
 .doc-meta{padding:13px 15px;background:#fff;border-bottom:1px solid #dde5ec;display:flex;align-items:center;gap:8px;flex-wrap:wrap}

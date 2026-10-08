@@ -41,7 +41,7 @@ A base D1 contém **12 dossiês, totalizando 374 páginas importadas, completas 
 
 O dossiê do Danilo também aparece automaticamente na ficha do processo **5000628-05.2025.8.13.0481** para a conta administradora. Cada documento possui uma rota privada permanente em `/html/<identificador>`, com leitura direta em HTML e controle de sessão. Os mesmos textos são consultáveis dentro das abas sem abrir outro arquivo.
 
-**Fidelidade:** esta importação reproduz o **texto extraído e a ordem original das páginas**, não os desenhos vetoriais, imagens e a diagramação pixel a pixel dos arquivos PDF. Os PDFs originais permanecem as referências visuais e devem ser usados quando a forma exata da prova for relevante. Não foram colocados em um repositório público.
+**Fidelidade visual:** as 374 páginas também possuem uma versão vetorial em SVG, com gráficos, tabelas, cores e posições provenientes dos PDFs originais. Os glifos são convertidos em curvas para dispensar fontes instaladas no dispositivo. A transcrição textual permanece disponível em cada página. As imagens carregam conforme entram na área de leitura; o documento inteiro abre automaticamente. Os PDFs e os lotes privados de importação não são publicados no GitHub.
 
 ### Acesso e segurança
 
@@ -64,6 +64,26 @@ node tests/smoke.mjs
 npm run deploy
 ```
 
-O CI confere scripts e inicia um Worker real para testar rotas públicas/privadas. O deploy foi feito por API no Cloudflare, preservando a conexão D1. As versões finais das páginas estão no D1, não no código-fonte do GitHub.
+O CI confere scripts, testa as permissões das páginas vetoriais e inicia um Worker real para testar rotas públicas/privadas. O deploy foi feito por API no Cloudflare, preservando a conexão D1. As versões finais das páginas estão no D1, não no código-fonte do GitHub.
 
 Integrações LexisPredict, SheetsPredict, PredictLM e WA.Auto não fazem parte deste deploy. O site não deve prometer consulta de autos em tempo real sem uma integração efetivamente ativa.
+
+## Atualização 2.2
+
+- Busca global preserva o termo digitado e permite buscar com Enter.
+- Abrir um registro por escritório ou advogado mantém o processo selecionado.
+- Filtros de escritório e profissional aparecem na carteira; trocar filtros reinicia a paginação.
+- Navegação cancela solicitações da aba anterior e impede que uma resposta atrasada substitua a ficha escolhida.
+- Resumo Executivo e Início carregam o resumo completo automaticamente.
+- O gráfico de processos com apontamentos calcula a proporção a partir dos dados do recorte.
+- Títulos, menu e cartões usam o padrão visual das referências enviadas.
+
+### Importação das páginas visuais
+
+Aplicar `migrations/0001-dossier-visuals.sql` à mesma base D1 antes de publicar esta versão. A produção já recebeu a migração e as 374 páginas. Para reproduzir a conversão em uma instalação própria:
+
+```bash
+python3 scripts/prepare-dossier-visuals.py /diretorio/privado/pdfs /diretorio/privado/danilo.pdf /diretorio/privado/lotes
+```
+
+O script verifica a quantidade de páginas de cada um dos 12 documentos e gera lotes parametrizados para a API D1. O arquivo de Danilo deve ser a versão forense de 5 páginas usada na base, não a versão de 26 páginas contida no ZIP. Os lotes contêm documentos confidenciais e devem permanecer fora do repositório. Cada página é armazenada comprimida, vinculada ao hash SHA-256 do PDF de origem e servida em `/html/<identificador>/page/<numero>.svg` com a mesma sessão e autorização do documento. A base textual permanece intacta.
