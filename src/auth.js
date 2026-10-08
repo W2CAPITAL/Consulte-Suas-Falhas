@@ -28,13 +28,13 @@ export async function ensureReady(env){
 export async function loginIsRequired(env){const r=await env.DB.prepare("SELECT value FROM app_settings WHERE key='login_required'").first();return r?.value!=='0'}
 export async function getSession(req,env){
  const match=(req.headers.get('Cookie')||'').match(/(?:^|;\s*)__Host-csf=([A-Za-z0-9_-]{32,})/);if(!match)return null;
- return env.DB.prepare('SELECT u.username,u.role FROM sessions s JOIN users u ON u.username=s.username WHERE s.token_hash=? AND s.expires>unixepoch()').bind(await hash(match[1])).first()
+ return env.DB.prepare('SELECT u.username,u.role,u.companies,u.lawyers FROM sessions s JOIN users u ON u.username=s.username WHERE s.token_hash=? AND s.expires>unixepoch()').bind(await hash(match[1])).first()
 }
 async function inputJson(req){if(Number(req.headers.get('Content-Length')||0)>8192)throw Error('Payload acima do limite');return req.json()}
 export async function authRequest(req,env){
  const path=new URL(req.url).pathname;
  if(req.method!=='GET'&&!validOrigin(req))return res({error:'Origem não autorizada'},403);
- if(path==='/api/auth/status'&&req.method==='GET'){const [required,u]=await Promise.all([loginIsRequired(env),getSession(req,env)]);return res({loginRequired:required,authenticated:!!u,canConfigure:u?.role==='admin',user:u?.username||null})}
+ if(path==='/api/auth/status'&&req.method==='GET'){const [required,u]=await Promise.all([loginIsRequired(env),getSession(req,env)]);return res({loginRequired:required,authenticated:!!u,canConfigure:u?.role==='admin',user:u?.username||null,role:u?.role||null,companies:u?JSON.parse(u.companies||'[]'):[],lawyers:u?JSON.parse(u.lawyers||'[]'):[]})}
 
  if(path==='/api/auth/challenge'&&req.method==='GET'){
   const username=String(new URL(req.url).searchParams.get('username')||'').trim();
@@ -95,6 +95,42 @@ export async function authRequest(req,env){
     .bind(body.newSalt,body.newHash,body.newIterations,user.username).run();
   await env.DB.prepare('DELETE FROM sessions WHERE username=?').bind(user.username).run();
   return res({ok:true},200,{'Set-Cookie':sessCookie('',0)});
+ }
+
+ // Gerenciamento de acesso por escritório/advogado. Nunca retorna hashes.
+ if(path==='/api/auth/users'&&req.method==='GET'){
+  const me=await getSession(req,env);if(me?.role!=='admin')return res({error:'Somente administrador'},403);
+  const q=await env.DB.prepare('SELECT username,role,companies,lawyers FROM users ORDER BY username').all();
+  return res({users:q.results.map(x=>({...x,companies:JSON.parse(x.companies||'[]'),lawyers:JSON.parse(x.lawyers||'[]')}))});
+ }
+ if(['/api/auth/users','/api/auth/users/scope','/api/auth/users/delete'].includes(path)&&req.method==='POST'){
+  const me=await getSession(req,env);if(me?.role!=='admin')return res({error:'Somente administrador'},403);
+  const b=await inputJson(req).catch(()=>null);
+  if(!b||typeof b.username!=='string'||!/^[a-zA-Z0-9_.-]{3,70}$/.test(b.username))return res({error:'Usuário inválido'},400);
+  const companies=Array.isArray(b.companies)?[...new Set(b.companies)]:[];
+  const lawyers=Array.isArray(b.lawyers)?[...new Set(b.lawyers)]:[];
+  const validCompanies=['*','GM','JVA','HUGS','VINCULO A CONFIRMAR'];
+  const validLawyers=['*','MATHEUS','ANDRESSA','ERALDO','MAIKON','GILBERTO','ISAI','FABIO'];
+  if(path!=='/api/auth/users/delete'&&(!['admin','viewer'].includes(b.role)||companies.some(x=>!validCompanies.includes(x))||lawyers.some(x=>!validLawyers.includes(x))))return res({error:'Escopo ou função inválida'},400);
+  if(path==='/api/auth/users'){
+   if(![310000].includes(b.iterations))return res({error:'Iterações inválidas'},400);
+   try{if(decode(b.salt).length!==16||decode(b.hash).length!==32)throw 1;}catch{return res({error:'Senha derivada inválida'},400)}
+   if(b.role!=='admin'&&(!companies.length||!lawyers.length))return res({error:'Selecione empresa e advogado'},400);
+   await env.DB.prepare('INSERT INTO users(username,salt,hash,iterations,role,companies,lawyers) VALUES(?,?,?,?,?,?,?)')
+     .bind(b.username,b.salt,b.hash,b.iterations,b.role,JSON.stringify(companies),JSON.stringify(lawyers)).run();
+   return res({ok:true},201);
+  }
+  if(b.username.toLowerCase()===me.username.toLowerCase())return res({error:'Não modifique a própria conta por esta rota'},400);
+  if(path==='/api/auth/users/delete'){
+   await env.DB.prepare('DELETE FROM sessions WHERE username=? COLLATE NOCASE').bind(b.username).run();
+   await env.DB.prepare('DELETE FROM users WHERE username=? COLLATE NOCASE').bind(b.username).run();
+   return res({ok:true});
+  }
+  if(b.role!=='admin'&&(!companies.length||!lawyers.length))return res({error:'Selecione empresa e advogado'},400);
+  const found=await env.DB.prepare('UPDATE users SET role=?,companies=?,lawyers=? WHERE username=? COLLATE NOCASE')
+   .bind(b.role,JSON.stringify(companies),JSON.stringify(lawyers),b.username).run();
+  await env.DB.prepare('DELETE FROM sessions WHERE username=? COLLATE NOCASE').bind(b.username).run();
+  return res({ok:true,changed:found.meta?.changes||0});
  }
  return res({error:'Rota inexistente'},404);
 }
