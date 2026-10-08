@@ -1,6 +1,11 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
+import { Script } from 'node:vm';
+import { UI_JS } from '../src/ui.js';
+import { PAGE } from '../src/page.js';
+new Script(UI_JS, { filename: 'ui.js (inlined)' });
+assert.match(PAGE, /id="reviewStatus"|id="createUser"/);
 import { verifyPasswordProof } from '../src/login-proof.js';
 const auth=fs.readFileSync('src/auth.js','utf8');
 const worker=fs.readFileSync('src/worker.js','utf8');
