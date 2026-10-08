@@ -76,7 +76,7 @@ async function showDashboard(){
  const suspect=summary.mensagens<summary.totalMensagensPrevistas?'<div class="note">Mensagens sincronizadas: '+num(summary.mensagens)+' de '+num(summary.totalMensagensPrevistas)+'. A ausência de uma conversa nesta versão não significa ausência de prova.</div>':'';
  const html=hero('Visão Geral da Auditoria','Processos, evidências e encaminhamentos · GM | HUGS | JVA','<button class="action gold" data-route="dossies">▣ Dossiês HTML completos</button>')+k+archiveCard()+suspect+'<div class="dashboard-cols">'+panel('Processos vinculados por escritório',chartOffices(overview))+panel('Advogados com mais apontamentos',chartPeople(overview))+panel('Critérios do relatório','<div class="donut-wrap"><div class="donut" style="background:conic-gradient(#0f4b77 0deg 235deg,#d29f48 235deg 306deg,#c34850 306deg 360deg)"><div class="donut-label">'+num(summary.processos)+'<small>registros D1</small></div></div><div class="legend"><div><b>Auditoria documental</b></div><div>Erros: <strong>'+num(summary.comErro)+'</strong></div><div>CNJs: <strong>'+num(summary.cnjs)+'</strong></div><div>NUMOPEDE: <strong>'+num(summary.numopedeCandidatos)+'</strong></div></div></div>')+'</div>';
  root(html);
- await showPreview('resumo','sourcePreview',false,'');
+ await showPreview('resumo','sourcePreview',true,'');
 }
 async function showPreview(id,slot,full,append){
  let parent=$(slot);
