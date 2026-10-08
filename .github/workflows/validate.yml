@@ -18,3 +18,5 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Testar sintaxe, login e acesso
         run: npm run check
+      - name: Testar Worker e acesso anônimo no ambiente local
+        run: node tests/smoke.mjs
