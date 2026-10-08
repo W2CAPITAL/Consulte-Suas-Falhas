@@ -1,13 +1,12 @@
 {
   "name": "consulte-suas-falhas",
+  "version": "2.1.0",
   "private": true,
-  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "check": "node --check src/worker.js",
+    "check": "node --check src/worker.js && node --check src/auth.js && node --check src/ui.js && node --check src/page.js && node tests/auth-modes.mjs",
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "prepare:data": "node scripts/prepare-data.mjs"
+    "deploy": "wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "^4.20.0"

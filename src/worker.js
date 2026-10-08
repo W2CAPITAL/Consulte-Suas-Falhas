@@ -1,21 +1,21 @@
 import { PAGE } from './page.js';
+import { ensureReady, loginIsRequired, getSession, authRequest } from './auth.js';
 const send=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const parse=s=>{try{return JSON.parse(s||'[]')}catch{return []}};
 const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
-function dec(s){return Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-s.length%4)%4)),c=>c.charCodeAt(0))}async function access(req,env){const t=req.headers.get('Cf-Access-Jwt-Assertion');if(!t||!env.ACCESS_TEAM_DOMAIN||!env.ACCESS_AUD)return null;try{const p=t.split('.'),h=JSON.parse(new TextDecoder().decode(dec(p[0]))),b=JSON.parse(new TextDecoder().decode(dec(p[1]))),iss='https://'+env.ACCESS_TEAM_DOMAIN.replace(/^https?:\/\//,'').replace(/\/$/,'');if(h.alg!=='RS256'||b.iss!==iss||b.exp*1000<=Date.now()||!([].concat(b.aud).includes(env.ACCESS_AUD)))return null;const res=await fetch(iss+'/cdn-cgi/access/certs');if(!res.ok)return null;const k=(await res.json()).keys.find(x=>x.kid===h.kid);if(!k)return null;const key=await crypto.subtle.importKey('jwk',k,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify']);return await crypto.subtle.verify('RSASSA-PKCS1-v1_5',key,dec(p[2]),new TextEncoder().encode(p[0]+'.'+p[1]))?b:null}catch{return null}}
 export default {async fetch(request,env){try{
  const u=new URL(request.url),route=u.pathname;
  if(route==='/'||route==='/index.html')return new Response(PAGE,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none'; base-uri 'none'"}});
  if(route==='/api/health')return send({online:true,d1:!!env.DB});
  if(!route.startsWith('/api/'))return new Response('Not Found',{status:404});
  if(!env.DB)return send({error:'D1 não conectado'},503);
+ await ensureReady(env);
+ if(route.startsWith('/api/auth/'))return authRequest(request,env);
  if(request.method!=='GET')return send({error:'Somente consulta'},405);
- if(route==='/api/summary'){const [p,m,e]=await Promise.all([env.DB.prepare('SELECT COUNT(*) c FROM processes').first(),env.DB.prepare('SELECT COUNT(*) c FROM messages').first(),env.DB.prepare('SELECT COUNT(*) c FROM processes WHERE qtd_erros>0').first()]);return send({processos:p.c,mensagens:m.c,comErro:e.c,integrado:!!(p.c&&m.c)})}
- const claims=await access(request,env);
- if(!claims)return send({error:'Para consultar dados privados, habilite Cloudflare Access. Não há login ou senha próprios do aplicativo.'},403);
- let permissions;try{permissions=JSON.parse(env.USER_SCOPES_JSON||'{}')}catch{return send({error:'Permissões inválidas'},503)}
- const role=permissions[String(claims.email||'').toLowerCase()];
- if(!role)return send({error:'Sem permissão para esta carteira'},403);
+ if(route==='/api/summary'){const owner=await getSession(request,env);if(!owner&&await loginIsRequired(env))return send({error:'Entre na auditoria para consultar os indicadores'},401);const [p,m,e]=await Promise.all([env.DB.prepare('SELECT COUNT(*) c FROM processes').first(),env.DB.prepare('SELECT COUNT(*) c FROM messages').first(),env.DB.prepare('SELECT COUNT(*) c FROM processes WHERE qtd_erros>0').first()]);return send({processos:p.c,mensagens:m.c,comErro:e.c,integrado:!!(p.c&&m.c)})}
+ const owner=await getSession(request,env);
+ if(!owner)return send({error:'Faça login para consultar processos e mensagens integrais'},401);
+ const role={role:owner.role,companies:['*'],lawyers:['*']};
  const office=u.searchParams.get('company')||'TODOS',lawyer=u.searchParams.get('lawyer')||'TODOS',q=(u.searchParams.get('q')||'').slice(0,150),page=Math.min(9999,Math.max(1,Number(u.searchParams.get('page'))||1));
  const allowed=o=>role.role==='admin'||(role.companies||[]).includes(o),allowedLawyer=l=>role.role==='admin'||(role.lawyers||[]).includes('*')||(role.lawyers||[]).some(x=>normalize(x)===normalize(l));
  if(route==='/api/processes'){
