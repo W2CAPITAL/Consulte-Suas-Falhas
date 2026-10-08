@@ -1,8 +1,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import { createHmac, webcrypto } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import { verifyPasswordProof } from '../src/login-proof.js';
-globalThis.crypto = webcrypto;
 const auth=fs.readFileSync('src/auth.js','utf8');
 const worker=fs.readFileSync('src/worker.js','utf8');
 const ui=fs.readFileSync('src/ui.js','utf8');
