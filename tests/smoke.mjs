@@ -28,7 +28,7 @@ try{
  assert.match(page.body,/showLibrary/);
  assert.match(page.body,/readDocument/);
  assert.match(page.body,/docViewer/);
- assert.match(page.body,/portal-app/);
+ assert.match(page.body,/showOffices/);
  assert.doesNotMatch(page.body,/Os PDFs de auditoria são documentos privados e serão servidos/);
  assert.doesNotMatch(page.body,/Vídeos publicados depois de revisão/);
  const auth=await get('/api/auth/status');
