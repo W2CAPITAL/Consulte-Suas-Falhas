@@ -1,56 +1,59 @@
-# Consulte Suas Falhas
-
-Plataforma privada de auditoria documental e revisão jurídica, com interface inspirada em menus de seleção de jogos: **escritório → advogado → área de análise**. Interface responsiva e tema noturno azul-marinho/dourado.
-
-## Aplicação
-
-**Cloudflare Workers + D1** — interface, API, login e dados em um único Worker.
+# Consulte Suas Falhas · CRM de auditoria processual
 
 **Produção:** https://consulte-suas-falhas.corporacaow1capital.workers.dev/
 
-O repositório guarda **somente código**. Dados pessoais, mensagens, documentos originais, senhas e tokens não devem ser adicionados ao GitHub.
+Aplicativo de auditoria documental com interface inspirada nos painéis de referência fornecidos: menu lateral fixo azul-marinho, cabeçalho escuro, conteúdo em cartões claros, tabelas, gráficos, destaque de risco e leitor HTML integrado. Construído em **Cloudflare Workers + D1**.
 
-## Áreas funcionais
+## Navegação sem etapa intermediária
 
-| Área | Função |
+Ao entrar, a tela inicial abre o resumo executivo. Clicar uma única vez em uma aba do menu carrega imediatamente seus dados, sem menus secundários obrigatórios:
+
+| Aba | Conteúdo aberto automaticamente |
 | --- | --- |
-| Central de comando | Indicadores da carteira disponível, processos com apontamentos e progresso de mensagens. |
-| Arquivo de processos | Busca por número CNJ, cliente e material da auditoria; evidências e providências do registro. |
-| Sala de evidências | Pesquisa autorizada nas mensagens sincronizadas; leitura individual. |
-| Ranking de auditoria | Apontamentos atribuídos por advogado, com ressalva expressa de que **não é julgamento de culpa**. |
-| Scanner NUMOPEDE | Processos candidatos à verificação judicial, sem apresentar candidato como ofício comprovado. |
-| Biblioteca de dossiês | Geração de relatórios HTML imprimíveis (Ctrl+P → PDF) com filtro e autorização no servidor; upload/visualização privada de PDFs originais. |
-| Central de vídeos | Apresentação guiada em cenas e importação/reprodução privada de MP4. |
-| Minha análise | Revisar um processo, reconhecer, contestar ou informar a correção do apontamento; mantém prova original e histórico separado. |
+| Início / Resumo Executivo | Indicadores do D1, distribuição por escritório e profissional, resumo HTML original. |
+| Escritórios | GM, HUGS e JVA; processos do escritório e **dossiê HTML original** na mesma página. |
+| Advogados | Ranking/seleção dos sete profissionais; processos e **dossiê individual HTML** já carregados. |
+| Todos os Processos | Tabela de processos da carteira, pesquisa e ficha detalhada do primeiro registro. |
+| Todas as Mensagens | Mensagens sincronizadas, pesquisa e primeira conversa expandida. |
+| Erros Individualizados | Processos com erros documentados e evidências individualizadas. |
+| Dossiês em HTML | Lista autorizada dos doze documentos e leitura automática integral por páginas. |
+| NUMOPEDE / OAB | Lista de candidatos ao scanner, CNJ, cliente e detalhes. |
+| Relatórios | Indicadores reais, gráficos e dossiê geral em HTML. |
+| Vídeos | Mídias MP4 que realmente existam no acervo privado. |
+| Configurações | Perfil, permissões, contas individuais autorizadas e encerramento de sessão. |
 
-O dossiê gerado pela aplicação é **dinâmico**, baseado nos dados atuais do D1. Ele não substitui os PDFs periciais originais, que só aparecerão na biblioteca depois de importados.
+## Arquivos HTML já importados
 
-## Importar os dossiês e os vídeos sem expor os dados
+A base D1 contém **12 dossiês, totalizando 374 páginas importadas, completas e paginadas**:
 
-1. Entre com uma conta administradora no aplicativo.
-2. Selecione **Todos os escritórios → Todos os advogados → Biblioteca de dossiês**.
-3. Descompacte o ZIP dos 12 PDFs em seu computador. Clique em **Selecionar pasta inteira** ou escolha vários arquivos PDF no campo principal.
-4. Clique em **Enviar arquivos privados** e aguarde o indicador atingir 100%. Não feche a aba durante o envio.
-5. Para os arquivos MP4, abra **Central de vídeos** e faça o mesmo procedimento.
-6. Os originais ficam em tabelas privadas do **Cloudflare D1**, são transmitidos com cookie de sessão e não entram no GitHub público. O acesso aos originais é administrativo, pois os arquivos podem misturar dados de diferentes carteiras.
+- Resumo Executivo Geral — 6 páginas.
+- GM — 35 páginas.
+- HUGS — 7 páginas.
+- JVA — 81 páginas.
+- Matheus — 78 páginas.
+- Andressa — 48 páginas.
+- Eraldo — 41 páginas.
+- Maikon — 24 páginas.
+- Gilberto — 23 páginas.
+- Isai — 17 páginas.
+- Fábio — 9 páginas.
+- Danilo — 5 páginas.
 
-**Limites de importação:** até 60 MiB por arquivo. Os envios são divididos em blocos de 48 KiB e armazenados de forma incremental. Para arquivos muito grandes ou utilização intensa, o armazenamento R2 é tecnicamente mais adequado, mas não está habilitado nessa conta. O D1 não deve ser tratado como um serviço de streaming de alto tráfego.
+O dossiê do Danilo também aparece automaticamente na ficha do processo **5000628-05.2025.8.13.0481** para a conta administradora. Cada documento possui uma rota privada permanente em `/html/<identificador>`, com leitura direta em HTML e controle de sessão. Os mesmos textos são consultáveis dentro das abas sem abrir outro arquivo.
 
-## Acesso e integridade
+**Fidelidade:** esta importação reproduz o **texto extraído e a ordem original das páginas**, não os desenhos vetoriais, imagens e a diagramação pixel a pixel dos arquivos PDF. Os PDFs originais permanecem as referências visuais e devem ser usados quando a forma exata da prova for relevante. Não foram colocados em um repositório público.
 
-- Login próprio, com cookies HttpOnly + Secure + SameSite=Strict.
-- Senhas protegidas por PBKDF2-SHA256; prova de login por desafio.
-- Permissões por empresa e profissional, conferidas nas consultas ao banco, inclusive no acesso direto por URL e na geração de relatórios.
-- Somente o administrador cria contas em **Configurações**, definindo empresa e advogado.
-- Nenhuma anotação individual altera o registro original da auditoria.
-- Não há acesso público a dados individualizados, PDFs privados ou vídeos privados.
-- Menções a NUMOPEDE devem preservar os níveis **candidato**, **determinação encontrada** e **ofício comprovadamente expedido/recebido**. A base de candidatos não prova sanção.
+### Acesso e segurança
 
-## Progresso da carteira
+Os documentos são confidenciais. A leitura integral requer sessão válida. Cada advogado tem acesso somente aos próprios dossiês individuais e aos dados autorizados por escopo; os dossiês gerais, completos por escritório e do Danilo permanecem restritos ao administrador, pois podem incluir informações de outras pessoas. A listagem de documentos é filtrada no servidor, e URLs diretas não contornam as permissões.
 
-No último levantamento do D1, a base continha 1.811 registros de processos, 4.623 mensagens sincronizadas de um universo documental de 20.973 e 125 candidatos NUMOPEDE. Esses números são observações do estado do banco, não garantias de sincronização definitiva. A interface exibe o total corrente.
+A criação de usuários também é feita pelo administrador no aplicativo. Acesso público não habilita consulta a processos, clientes, mensagens ou documentos privados.
 
-As integrações LexisPredict, SheetsPredict, PredictLM e WA.Auto não foram conectadas neste pacote. Não há consulta automática em tempo real a autos externos por essa interface.
+## Integridade das métricas
+
+Os números exibidos na interface vêm do D1 atual: **1.811 registros de processos, 4.623 mensagens importadas e 125 candidatos NUMOPEDE** no último levantamento. São diferentes do universo documental dos PDFs originais, que informam **1.791 processos auditados, 1.041 erros individuais e 6.924 mensagens de cobrança**. Esses dados não são somados nem apresentados como uma única amostra.
+
+**NUMOPEDE:** registro candidato não equivale a expedição de ofício ou punição. **Ranking:** vínculo de profissional e contagem de falhas não equivalem a culpa jurídica definitiva. Dados pendentes de vínculo com escritório permanecem assim até confirmação.
 
 ## Desenvolvimento
 
@@ -61,6 +64,6 @@ node tests/smoke.mjs
 npm run deploy
 ```
 
-Os testes de CI verificam sintaxe, mecanismos de login, acesso restrito e inicialização real do Worker em ambiente local. O deploy produtivo é verificado separadamente no Cloudflare.
+O CI confere scripts e inicia um Worker real para testar rotas públicas/privadas. O deploy foi feito por API no Cloudflare, preservando a conexão D1. As versões finais das páginas estão no D1, não no código-fonte do GitHub.
 
-**Licenciamento:** todos os direitos reservados, salvo concessão explícita pelo mantenedor. Não redistribua informações processuais privadas.
+Integrações LexisPredict, SheetsPredict, PredictLM e WA.Auto não fazem parte deste deploy. O site não deve prometer consulta de autos em tempo real sem uma integração efetivamente ativa.
