@@ -27,6 +27,8 @@ try{
  assert.match(page.body,/id="navMenu"/);
  assert.match(page.body,/showLibrary/);
  assert.match(page.body,/readDocument/);
+ assert.match(page.body,/docViewer/);
+ assert.match(page.body,/portal-app/);
  assert.doesNotMatch(page.body,/Os PDFs de auditoria são documentos privados e serão servidos/);
  assert.doesNotMatch(page.body,/Vídeos publicados depois de revisão/);
  const auth=await get('/api/auth/status');
@@ -34,7 +36,7 @@ try{
  assert.equal(JSON.parse(auth.body).authenticated,false);
  const summary=await get('/api/summary');
  assert.equal(summary.status,401);
- for(const p of ['/api/processes','/api/ranking','/api/numopede','/api/dossiers','/api/dossier/matheus','/api/media/list','/api/report/print']){
+ for(const p of ['/api/processes','/api/ranking','/api/numopede','/api/dossiers','/api/dossier/matheus','/html/matheus','/html/resumo','/api/media/list','/api/report/print']){
    const r=await get(p);assert.equal(r.status,401,p+' must reject unauthenticated requests');
  }
  console.log('PASS: actual Wrangler worker boots, game UI renders, no placeholders, login works, restricted APIs deny anonymous visitors.');
