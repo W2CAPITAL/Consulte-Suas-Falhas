@@ -66,7 +66,7 @@ export default {async fetch(request,env){
  const owner=await getSession(request,env);
  const required=await loginIsRequired(env);
  if(!owner&&(required||route!=='/api/summary'))return send({error:'Autentique-se para consultar dados pessoais'},401);
- const perms=permissions(owner);
+ const perms=owner?permissions(owner):{admin:true,companies:['*'],lawyers:['*']};
  await ensureExtras(env);
  if(route==='/api/summary'&&request.method==='GET')return send(await countSummary(env,perms));
  if(!owner)return send({error:'Acesso não autorizado'},401);
