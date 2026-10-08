@@ -51,7 +51,9 @@ A criação de usuários também é feita pelo administrador no aplicativo. Aces
 
 ## Integridade das métricas
 
-Os números exibidos na interface vêm do D1 atual: **1.811 registros de processos, 4.623 mensagens importadas e 125 candidatos NUMOPEDE** no último levantamento. São diferentes do universo documental dos PDFs originais, que informam **1.791 processos auditados, 1.041 erros individuais e 6.924 mensagens de cobrança**. Esses dados não são somados nem apresentados como uma única amostra.
+Os indicadores principais do Início, Resumo Executivo e Relatórios seguem o **Resumo Executivo Geral recebido**: **1.791 processos, 1.041 erros individualizados, 125 candidatos, 1 ordem, 6.924 cobranças e 1.041 erros gerais**. O servidor extrai esses seis valores da primeira página textual do PDF já importada no D1; não recalcula erros por quantidade de processos ou por soma de atribuições dos profissionais.
+
+As listas preservam os registros de consulta disponíveis no D1 (1.811 registros de processos e 4.623 mensagens no último levantamento). Seu tamanho não substitui os indicadores do documento. Os cartões dos escritórios e dos profissionais usam os respectivos PDFs; a carteira histórica conjunta continua sendo uma classificação administrativa. Os recortes por escritório podem se sobrepor, como nos PDFs.
 
 **NUMOPEDE:** registro candidato não equivale a expedição de ofício ou punição. **Ranking:** vínculo de profissional e contagem de falhas não equivalem a culpa jurídica definitiva. A atribuição administrativa dos escritórios segue a política documentada abaixo.
 
@@ -100,3 +102,7 @@ Os 1.555 registros anteriormente sem escritório recebem uma classificação de 
 Para registros sem correspondência exclusiva, os anos 2025–2026 representam a carteira recente GM; os anteriores ou sem ano válido ficam na carteira histórica **JVA / HUGS**. Essa é uma regra administrativa aproximada para a orientação de cerca de 18 meses, pois o cadastro contém o ano do CNJ, sem data completa de distribuição. Ela não declara a data de contratação nem autoria de atos. A categoria histórica funciona nos filtros e abre os dossiês JVA e HUGS. `office_assignment_audit` preserva o escritório anterior, o novo, o critério e a data fixa da política (08/10/2026), permitindo revisão sem perder a origem.
 
 Para reproduzir a classificação, aplique a migração 0003, use `scripts/prepare-office-links.py` para gerar os vínculos das listas dos PDFs em diretório privado, importe esses lotes no D1 e execute `scripts/apply-office-policy.sql`. O script ignora as menções contextuais e cruza somente a seção de lista de processos.
+
+## Atualização 2.4
+
+O painel exibe as seis métricas documentais com suas unidades corretas. A contagem interna de 581 processos com ao menos um apontamento deixa de ocupar o lugar dos 1.041 erros do PDF. O gráfico de percentual de processos foi substituído por erros nos recortes dos dossiês; processos e ocorrências não formam a mesma unidade. O ranking documental e os indicadores por escritório/profissional também vêm da primeira página dos respectivos PDFs. A API mantém os dados de consulta e entrega a referência documental separada em `documental`.

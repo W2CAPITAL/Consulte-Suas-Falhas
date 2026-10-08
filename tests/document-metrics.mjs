@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import { parseDocumentMetrics, readDocumentarySummary } from '../src/document-metrics.js';
+import worker from '../src/worker.js';
+const text='AUDITORIA\n 1791  1041 125 1 6924 1.041\n PROCESSOS ERROS CANDIDATOS ORDENS COBRANÇAS ERROS GERAIS\n Matheus 539\n Andressa 302\n';
+const expected={processos:1791,erros:1041,candidatos:125,ordens:1,cobrancas:6924,errosGerais:1041,rankings:[{nome:'MATHEUS',atribuicoes:539},{nome:'ANDRESSA',atribuicoes:302}]};
+assert.deepEqual(parseDocumentMetrics(text),expected);
+assert.equal(parseDocumentMetrics('texto com 581 processos, 1041 erros'),null);
+assert.equal(parseDocumentMetrics('1 2 3 4 5'),null);
+assert.deepEqual(parseDocumentMetrics('1.791 1.041 125 1 6.924 1.041').processos,1791);
+const sources=[{doc_id:'resumo',title:'Resumo',scope:'ALL',kind:'summary',page_text:text},{doc_id:'gm',title:'GM',scope:'GM',kind:'office',page_text:'222 177 9 0 2185 1.041'},{doc_id:'matheus',title:'Matheus',scope:'MATHEUS',kind:'lawyer',page_text:'655 539 60 1 3730 1.041'}];
+let documentReads=0, user={username:'admin',role:'admin',companies:'["*"]',lawyers:'["*"]'};
+const DB={prepare(sql){return {bind(){return this},async run(){return {}},async first(){
+ if(sql.includes('FROM sessions'))return user;
+ if(sql.includes('app_settings'))return {value:'1'};
+ if(sql.includes('registros'))return {registros:1811,cnjs:1790,atribuicoes:1347,comErro:581};
+ return {n:sql.includes('numopede')?125:4623};
+},async all(){documentReads++;return {results:sources}}}}};
+const doc=await readDocumentarySummary(DB);assert.equal(doc.erros,1041);assert.equal(doc.escritorios[0].processos,222);assert.equal(doc.advogados[0].erros,539);
+const get=()=>worker.fetch(new Request('https://test.local/api/summary',{headers:{Cookie:'__Host-csf='+'a'.repeat(43)}}),{DB});
+const admin=await(await get()).json();assert.equal(admin.documental.erros,1041);assert.equal(admin.documental.processos,1791);assert.equal(admin.comErro,581);assert.equal(admin.mensagens,4623);
+user={...user,role:'viewer',companies:'["GM"]',lawyers:'["MATHEUS"]'};documentReads=0;
+const scoped=await(await get()).json();assert.equal(scoped.documental,null);assert.equal(documentReads,0,'Restricted accounts must not read general/private documentary metrics');
+console.log('PASS: PDF metrics, grouped numbers, correct units, independent consultation counts and scoped summary access.');

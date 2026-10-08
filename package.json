@@ -1,10 +1,10 @@
 {
   "name": "consulte-suas-falhas",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check src/worker.js && node --check src/auth.js && node --check src/ui.js && node --check src/page.js && node tests/auth-modes.mjs && node tests/dossier-pages.mjs && node tests/media-playback.mjs && python3 tests/office-policy.py",
+    "check": "node --check src/worker.js && node --check src/auth.js && node --check src/ui.js && node --check src/page.js && node tests/auth-modes.mjs && node tests/dossier-pages.mjs && node tests/media-playback.mjs && python3 tests/office-policy.py && node tests/document-metrics.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
   },

@@ -72,21 +72,26 @@ function chartPeople(overview){
  return rows.map((x,i)=>bar((i+1)+'º  '+x.nome,x.atribuicoes,max,i===0?'gold':'')).join('')||'<p class="placeholder">Sem atribuições no recorte.</p>';
 }
 function chartFindings(summary){
+ if(summary.documental){
+  const rows=summary.documental.escritorios||[],max=Math.max(1,...rows.map(x=>x.erros));
+  return rows.map((x,i)=>bar(x.scope,x.erros,max,i===0?'gold':i===1?'':'red')).join('')+'<small class="doc-coverage">Erros do recorte de cada PDF. Um processo pode integrar mais de um escritório.</small>';
+ }
  const total=Number(summary.processos)||0,flagged=Math.max(0,Math.min(total,Number(summary.comErro)||0));
  const degrees=total?flagged/total*360:0;
  return '<div class="donut-wrap"><div class="donut" role="img" aria-label="'+num(flagged)+' de '+num(total)+' processos com apontamentos" style="background:conic-gradient(#c34850 0deg '+degrees+'deg,#0f4b77 '+degrees+'deg 360deg)"><div class="donut-label">'+(total?Math.round(flagged/total*100):0)+'%<small>com apontamentos</small></div></div><div class="legend"><div><span>Com apontamentos</span><strong>'+num(flagged)+'</strong></div><div><span>Sem apontamentos</span><strong>'+num(total-flagged)+'</strong></div><div><span>Total no recorte</span><strong>'+num(total)+'</strong></div></div></div>';
 }
+function documentaryCards(d){return '<div class="stats documentary-stats">'+kpi(num(d.processos),'PROCESSOS','▣')+kpi(num(d.erros),'ERROS INDIVIDUALIZADOS','⚠','red')+kpi(num(d.candidatos),'CANDIDATOS NUMOPEDE','⚖','gold')+kpi(num(d.ordens),'ORDENS','⚖')+kpi(num(d.cobrancas),'COBRANÇAS','✉')+kpi(num(d.errosGerais),'ERROS GERAIS','⚠','red')+'</div>'}
+function documentaryOverview(summary,overview){const d=summary.documental;return d?{...overview,companies:d.escritorios.map(x=>({escritorio:x.scope,total:x.processos})),lawyers:d.rankings}:overview}
 function processFilters(){
  const available=(items,key)=>items.filter(x=>S.auth.role==='admin'||(S.auth[key]||[]).includes('*')||(S.auth[key]||[]).includes(x));
  const options=(items,value)=>'<option value="TODOS">Todos</option>'+items.map(x=>'<option '+(value===x?'selected':'')+' value="'+esc(x)+'">'+esc(x)+'</option>').join('');
  return '<div class="filter-fields"><label>Escritório<select class="select" data-filter="company">'+options(available(companies,'companies'),S.company)+'</select></label><label>Advogado<select class="select" data-filter="lawyer">'+options(available(lawyers,'lawyers'),S.lawyer)+'</select></label></div>';
 }
-function archiveCard(){return '<details class="source-note"><summary>Origem dos indicadores</summary>Os números desta tela são da base D1 atual. Os PDFs históricos registram 1.791 processos auditados, 1.041 erros individualizados e 6.924 cobranças. Os universos não devem ser somados ou confundidos.</details>'}
+function archiveCard(summary){return '<details class="source-note"><summary>Origem dos indicadores</summary>'+(summary.documental?'Indicadores extraídos do Resumo Executivo Geral recebido. Erros individualizados são ocorrências, e um processo pode conter várias. As listas mostram os registros disponíveis para consulta.':'Indicadores do recorte autorizado na base de consulta.')+'</details>'}
 async function showDashboard(){
- const {summary,overview}=await dataCore();
- const k='<div class="stats">'+kpi(num(summary.processos),'PROCESSOS NA CARTEIRA','▣')+kpi(num(summary.comErro),'PROCESSOS COM APONTAMENTOS','⚠','red')+kpi(num(summary.mensagens),'MENSAGENS DISPONÍVEIS','✉')+kpi(num(summary.numopedeCandidatos),'CANDIDATOS NUMOPEDE','⚖','gold')+kpi(num(summary.cnjs),'CNJS IDENTIFICADOS','◉')+'</div>';
- const suspect=summary.mensagens<summary.totalMensagensPrevistas?'<div class="note">Mensagens sincronizadas: '+num(summary.mensagens)+' de '+num(summary.totalMensagensPrevistas)+'. A ausência de uma conversa nesta versão não significa ausência de prova.</div>':'';
- const html=hero('Visão Geral da Auditoria','Processos, evidências e encaminhamentos · GM | HUGS | JVA','<button class="action gold" data-route="dossies">▣ Dossiês HTML completos</button>')+k+archiveCard()+suspect+'<div class="dashboard-cols">'+panel('Processos vinculados por escritório',chartOffices(overview))+panel('Advogados com mais apontamentos',chartPeople(overview))+panel('Processos com apontamentos',chartFindings(summary))+'</div>'+panel('Resumo executivo completo','<div id="sourcePreview"></div>');
+ const {summary,overview}=await dataCore(),d=summary.documental,charts=documentaryOverview(summary,overview);
+ const k=d?documentaryCards(d):'<div class="stats">'+kpi(num(summary.processos),'PROCESSOS NA CARTEIRA','▣')+kpi(num(summary.comErro),'PROCESSOS COM APONTAMENTOS','⚠','red')+kpi(num(summary.mensagens),'MENSAGENS DISPONÍVEIS','✉')+kpi(num(summary.numopedeCandidatos),'CANDIDATOS NUMOPEDE','⚖','gold')+kpi(num(summary.cnjs),'CNJS IDENTIFICADOS','◉')+'</div>';
+ const html=hero('Visão Geral da Auditoria','Indicadores dos PDFs de auditoria · GM | HUGS | JVA','<button class="action gold" data-route="dossies">▣ Dossiês HTML completos</button>')+k+archiveCard(summary)+'<div class="dashboard-cols">'+panel(d?'Processos nos PDFs por escritório':'Processos vinculados por escritório',chartOffices(charts))+panel('Advogados com mais apontamentos',chartPeople(charts))+panel(d?'Erros nos PDFs por escritório':'Processos com apontamentos',chartFindings(summary))+'</div>'+panel('Resumo executivo completo','<div id="sourcePreview"></div>');
  root(html);
  await chooseDocument('resumo','sourcePreview',true).catch(reportError);
 }
@@ -96,12 +101,13 @@ async function showPreview(id,slot,full,append){
  if(parent)await readDocument(id,slot,full);
 }
 async function showOffices(){
- const {overview}=await dataCore();
+ const {summary,overview}=await dataCore();
  const available=companies.filter(o=>S.auth.role==='admin'||(S.auth.companies||[]).includes('*')||(S.auth.companies||[]).includes(o));
  if(!available.includes(S.company))S.company=available.find(x=>x!=='JVA / HUGS')||available[0]||'TODOS';
  const list=available.map(o=>{
-   const count=(overview.companies||[]).find(x=>x.escritorio===o)?.total||0;
-   return '<button class="office-card '+(S.company===o?'selected':'')+'" data-company="'+esc(o)+'"><div class="office-illustration">'+esc(o==='JVA / HUGS'?'JVA · HUGS':o)+'</div><div class="office-body"><strong>'+esc(o)+'</strong><small>'+num(count)+' processos da carteira</small><span class="chip navy">'+(o==='JVA / HUGS'?'Carteira histórica':'Documento por escritório')+'</span></div></button>';
+   const source=summary.documental?.escritorios.find(x=>x.scope===o);
+   const count=source?.processos??((overview.companies||[]).find(x=>x.escritorio===o)?.total||0);
+   return '<button class="office-card '+(S.company===o?'selected':'')+'" data-company="'+esc(o)+'"><div class="office-illustration">'+esc(o==='JVA / HUGS'?'JVA · HUGS':o)+'</div><div class="office-body"><strong>'+esc(o)+'</strong><small>'+num(count)+(source?' processos no PDF':' processos da carteira')+'</small><span class="chip navy">'+(o==='JVA / HUGS'?'Carteira histórica':'Documento por escritório')+'</span></div></button>';
  }).join('');
  root(hero('Escritórios','Selecione um escritório; o documento correspondente aparece automaticamente.')+'<div class="grid-3">'+list+'</div>'+panel('Carteira de '+S.company,'<div id="officeCases" class="placeholder">Carregando processos…</div>')+panel('Dossiê original — '+S.company+' · HTML','<div id="officeDoc"></div>'));
  const d=await api('/api/processes?'+new URLSearchParams({company:S.company,lawyer:'TODOS',page:'1'}));
@@ -115,14 +121,15 @@ function miniCases(d){
  return '<div class="table-scroll"><table class="table"><thead><tr><th>Processo</th><th>Cliente</th><th>Advogados</th><th>Apontamentos</th></tr></thead><tbody>'+d.items.slice(0,10).map(x=>'<tr data-process="'+x.record_id+'"><td class="row-title">'+esc(x.processo)+'</td><td>'+esc(x.cliente)+'</td><td>'+esc(x.advogados)+'</td><td>'+badge(x.qtd_erros+' apontamentos')+'</td></tr>').join('')+'</tbody></table></div><small class="doc-coverage">'+num(d.total)+' registros encontrados na classificação.</small>';
 }
 async function showLawyers(){
- const {overview}=await dataCore();
+ const {summary,overview}=await dataCore();
  const allowed=lawyers.filter(l=>S.auth.role==='admin'||(S.auth.lawyers||[]).includes('*')||(S.auth.lawyers||[]).includes(l));
  if(!allowed.includes(S.lawyer))S.lawyer=allowed[0]||'TODOS';
- const rank=new Map((overview.lawyers||[]).map(x=>[x.nome,x]));
- const people=allowed.map((l,i)=>'<button class="person '+(S.lawyer===l?'selected':'')+'" data-lawyer="'+esc(l)+'"><span class="avatar">'+l[0]+'</span><span style="min-width:0;flex:1"><strong>'+esc(l)+'</strong><small>'+num(rank.get(l)?.processos||0)+' processos listados</small></span><span class="chip '+(i===0?'amber':'navy')+'">'+num(rank.get(l)?.atribuicoes||0)+' atrib.</span></button>').join('');
+ const ranked=summary.documental?summary.documental.advogados.map(x=>({nome:x.scope,processos:x.processos,atribuicoes:x.erros})):(overview.lawyers||[]);
+ const rank=new Map(ranked.map(x=>[x.nome,x]));
+ const people=allowed.map((l,i)=>'<button class="person '+(S.lawyer===l?'selected':'')+'" data-lawyer="'+esc(l)+'"><span class="avatar">'+l[0]+'</span><span style="min-width:0;flex:1"><strong>'+esc(l)+'</strong><small>'+num(rank.get(l)?.processos||0)+(summary.documental?' processos no PDF':' processos listados')+'</small></span><span class="chip '+(i===0?'amber':'navy')+'">'+num(rank.get(l)?.atribuicoes||0)+' atrib.</span></button>').join('');
  root(hero('Advogados — visão individual','Processos, apontamentos e dossiê completo de cada profissional.')+'<div class="two-cols">'+panel('Escolha do advogado','<div class="person-grid">'+people+'</div>')+panel('Resumo de '+S.lawyer,'<div id="lawyerStats" class="placeholder">Calculando registros…</div>')+'</div>'+panel('Processos vinculados · '+S.lawyer,'<div id="lawyerCases"></div>')+panel('Dossiê completo — '+S.lawyer,'<div id="lawyerDoc"></div>'));
  const p=rank.get(S.lawyer)||{};
- $('lawyerStats').innerHTML='<div class="stats" style="grid-template-columns:repeat(2,1fr)">'+kpi(num(p.processos),'PROCESSOS VINCULADOS','▣')+kpi(num(p.atribuicoes),'APONTAMENTOS EM REGISTROS','⚠','red')+'</div><div class="note">Uma atribuição processual não confirma autoria direta ou culpa disciplinar.</div>';
+ $('lawyerStats').innerHTML='<div class="stats" style="grid-template-columns:repeat(2,1fr)">'+kpi(num(p.processos),summary.documental?'PROCESSOS NO PDF':'PROCESSOS VINCULADOS','▣')+kpi(num(p.atribuicoes),summary.documental?'ERROS NO PDF':'APONTAMENTOS EM REGISTROS','⚠','red')+'</div><div class="note">Uma atribuição processual não confirma autoria direta ou culpa disciplinar.</div>';
  const d=await api('/api/processes?'+new URLSearchParams({company:'TODOS',lawyer:S.lawyer,page:'1'}));
  $('lawyerCases').innerHTML=miniCases(d);
  await chooseDocument(S.lawyer.toLowerCase(),'lawyerDoc',true);
@@ -210,8 +217,9 @@ async function readDocument(id,host,full=true){
  }
 }
 async function showReports(){
- const {summary,overview}=await dataCore();
- root(hero('Relatórios e Analytics','Comparações e resumo documental, sem gráficos com valores inventados.')+'<div class="stats">'+kpi(num(summary.processos),'PROCESSOS NA CARTEIRA','▣')+kpi(num(summary.comErro),'COM FALHAS','⚠','red')+kpi(num(summary.numopedeCandidatos),'CANDIDATOS NUMOPEDE','⚖')+'</div><div class="two-cols">'+panel('Distribuição por escritório',chartOffices(overview))+panel('Ranking de apontamentos',chartPeople(overview))+'</div>'+panel('Resumo executivo original convertido em HTML','<div id="reportsDoc"></div>'));
+ const {summary,overview}=await dataCore(),d=summary.documental,charts=documentaryOverview(summary,overview);
+ const metrics=d?documentaryCards(d):'<div class="stats">'+kpi(num(summary.processos),'PROCESSOS NA CARTEIRA','▣')+kpi(num(summary.comErro),'COM FALHAS','⚠','red')+kpi(num(summary.numopedeCandidatos),'CANDIDATOS NUMOPEDE','⚖')+'</div>';
+ root(hero('Relatórios e Analytics','Indicadores extraídos dos PDFs de auditoria.')+metrics+archiveCard(summary)+'<div class="two-cols">'+panel(d?'Processos nos PDFs por escritório':'Distribuição por escritório',chartOffices(charts))+panel('Ranking de apontamentos',chartPeople(charts))+'</div>'+panel('Resumo executivo original convertido em HTML','<div id="reportsDoc"></div>'));
  await chooseDocument('resumo','reportsDoc',true);
 }
 async function showVideos(){

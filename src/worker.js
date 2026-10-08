@@ -1,3 +1,4 @@
+import { readDocumentarySummary } from './document-metrics.js';
 import { documentPage } from './document-page.js';
 import { PAGE } from './page.js';
 import { handleMedia } from './media.js';
@@ -54,7 +55,8 @@ async function countSummary(env,perms){
  ? await env.DB.prepare('SELECT COUNT(*) n FROM messages').first()
  : await env.DB.prepare('SELECT COUNT(DISTINCT m.message_id) n FROM messages m JOIN message_case_links l ON l.message_id=m.message_id JOIN processes p ON p.cnj=l.cnj'+clause).bind(...scope.args).first();
  const candidates=await env.DB.prepare('SELECT COUNT(DISTINCT n.cnj) n FROM numopede_checks n JOIN processes p ON p.cnj=n.cnj'+clause).bind(...scope.args).first();
- return {processos:n.registros,cnjs:n.cnjs,comErro:n.comErro,atribuicoes:n.atribuicoes,mensagens:countMessage.n,numopedeCandidatos:candidates.n,totalMensagensPrevistas:20973,integrado:n.registros>0,ressalva:'Apontamento atribuído não é culpa comprovada. Candidato NUMOPEDE não é ofício nem punição.'};
+ const documental=perms.admin?await readDocumentarySummary(env.DB):null;
+ return {documental,processos:n.registros,cnjs:n.cnjs,comErro:n.comErro,atribuicoes:n.atribuicoes,mensagens:countMessage.n,numopedeCandidatos:candidates.n,totalMensagensPrevistas:20973,integrado:n.registros>0,ressalva:'Apontamento atribuído não é culpa comprovada. Candidato NUMOPEDE não é ofício nem punição.'};
 }
 export default {async fetch(request,env){
  try{

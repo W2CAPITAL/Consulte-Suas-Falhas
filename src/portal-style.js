@@ -37,6 +37,7 @@ a{color:#0b4d83;text-decoration:none}a:hover{text-decoration:underline}
 .card-head .minor{font-weight:500;color:#aec4d6;font-size:11px}
 .card-body{padding:14px}
 .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.documentary-stats{grid-template-columns:repeat(6,minmax(0,1fr))}
 .stat{min-height:88px;justify-content:center;text-align:center;background:#fff;border:1px solid #d5dfe7;border-radius:8px;padding:13px 10px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 5px #112e480d}
 .stat-icon{display:none;font:26px/1 Georgia,serif;color:#0c3454;flex:0 0 34px;text-align:center}
 .stat-value{font:750 clamp(23px,2.4vw,34px)/1 "Segoe UI",Arial,sans-serif;color:#0d2b4a;letter-spacing:-.035em}
