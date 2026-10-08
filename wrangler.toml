@@ -2,11 +2,7 @@ name = "consulte-suas-falhas"
 main = "src/worker.js"
 compatibility_date = "2026-10-08"
 
-[vars]
-DATA_KEY = "audit.json"
-
-# A vinculação R2 e secrets só devem ser ativados depois que Cloudflare Access e R2
-# estiverem habilitados na conta. Nunca faça upload da carteira no GitHub.
-# [[r2_buckets]]
-# binding = "AUDIT_DATA"
-# bucket_name = "consulte-falhas-private"
+[[d1_databases]]
+binding = "DB"
+database_name = "consulte-suas-falhas-d1"
+database_id = "f893e90f-8e85-4e96-aecd-c78403539a69"
