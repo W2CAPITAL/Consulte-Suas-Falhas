@@ -72,6 +72,22 @@ export default {async fetch(request,env){
  if(route.startsWith('/api/media/'))return handleMedia(request,env,owner);
  if(route==='/api/summary'&&request.method==='GET')return send(await countSummary(env,perms));
  if(!owner)return send({error:'Acesso não autorizado'},401);
+ if(route==='/api/dossiers'&&request.method==='GET'){
+  const docs=await env.DB.prepare('SELECT doc_id,title,kind,scope,expected_pages,pages_imported FROM dossier_docs WHERE pages_imported=expected_pages AND pages_imported>0 ORDER BY CASE kind WHEN \'summary\' THEN 0 WHEN \'office\' THEN 1 WHEN \'lawyer\' THEN 2 ELSE 3 END,title').all();
+  const approved=docs.results.filter(d=>perms.admin||(d.kind==='lawyer'&&(perms.lawyers.includes('*')||perms.lawyers.includes(d.scope))));
+  return send({items:approved,total:approved.length,description:'Versões HTML pesquisáveis de PDFs originais. Somente dados autorizados; os PDFs não foram publicados no repositório.'});
+ }
+ if(route.startsWith('/api/dossier/')&&request.method==='GET'){
+  const id=route.slice('/api/dossier/'.length).toLowerCase();
+  if(!/^[a-z0-9_-]{2,35}$/.test(id))return send({error:'Documento inválido'},400);
+  const doc=await env.DB.prepare('SELECT doc_id,title,kind,scope,expected_pages,pages_imported FROM dossier_docs WHERE doc_id=? AND pages_imported=expected_pages AND pages_imported>0').bind(id).first();
+  if(!doc)return send({error:'Dossiê indisponível'},404);
+  if(!perms.admin&&!(doc.kind==='lawyer'&&(perms.lawyers.includes('*')||perms.lawyers.includes(doc.scope))))return send({error:'Sem acesso a este dossiê'},403);
+  const start=Math.max(1,Math.min(doc.pages_imported,parseInt(u.searchParams.get('start')||'1',10)||1));
+  const limit=Math.max(1,Math.min(12,parseInt(u.searchParams.get('limit')||'6',10)||6));
+  const rows=await env.DB.prepare('SELECT page_num,page_text FROM dossier_pages WHERE doc_id=? AND page_num>=? AND page_num<? ORDER BY page_num').bind(id,start,start+limit).all();
+  return send({doc,pages:rows.results,start,next:start+rows.results.length<=doc.pages_imported?start+rows.results.length:null,complete:start+rows.results.length>doc.pages_imported});
+ }
  if(route==='/api/overview'&&request.method==='GET'){
    const s=scopeSql(perms,'p'),base=where(s.wh);
    const rows=await env.DB.prepare('SELECT p.escritorio, COUNT(*) total FROM processes p'+base+' GROUP BY p.escritorio').bind(...s.args).all();
