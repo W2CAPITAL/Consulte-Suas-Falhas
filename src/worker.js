@@ -1,4 +1,5 @@
 import { PAGE } from './page.js';
+import { handleMedia } from './media.js';
 import { ensureReady, loginIsRequired, getSession, authRequest } from './auth.js';
 
 const send=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});
@@ -68,6 +69,7 @@ export default {async fetch(request,env){
  if(!owner&&(required||route!=='/api/summary'))return send({error:'Autentique-se para consultar dados pessoais'},401);
  const perms=owner?permissions(owner):{admin:true,companies:['*'],lawyers:['*']};
  await ensureExtras(env);
+ if(route.startsWith('/api/media/'))return handleMedia(request,env,owner);
  if(route==='/api/summary'&&request.method==='GET')return send(await countSummary(env,perms));
  if(!owner)return send({error:'Acesso não autorizado'},401);
  if(route==='/api/overview'&&request.method==='GET'){
@@ -77,6 +79,28 @@ export default {async fetch(request,env){
    const stats=new Map();
    for(const v of rank.results){for(const x of [...new Set(arr(v.advogados).map(norm))]){if(!x)continue;const z=stats.get(x)||{nome:x,processos:0,atribuicoes:0};z.processos++;z.atribuicoes+=Number(v.qtd_erros)||0;stats.set(x,z)}}
    return send({companies:rows.results,lawyers:[...stats.values()].sort((a,b)=>b.atribuicoes-a.atribuicoes),disclaimer:'Contagem interna de atribuições; não representa culpa ou condenação.'});
+ }
+ if(route==='/api/report/print'&&request.method==='GET'){
+  const scope=selectedSearch(perms,u,'p');if(scope.error)return send({error:scope.error},400);
+  const records=await env.DB.prepare('SELECT p.processo,p.cnj,p.cliente,p.escritorio,p.advogados,p.qtd_erros,p.payload,n.status numopede_status FROM processes p LEFT JOIN numopede_checks n ON n.cnj=p.cnj'+where(scope.wh)+' ORDER BY p.qtd_erros DESC,p.record_id LIMIT 2000').bind(...scope.args).all();
+  const escape=x=>String(x??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const office=escape(scope.company),lawyer=escape(scope.lawyer);
+  const count=records.results.length,flagged=records.results.filter(x=>x.qtd_erros>0).length,candidate=records.results.filter(x=>x.numopede_status).length;
+  let html='<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Dossiê de auditoria · '+office+' / '+lawyer+'</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font:11px/1.48 "Segoe UI",Arial,sans-serif;color:#162a3b;margin:0}header{padding:25px;background:#0c2840;color:white;border-bottom:6px solid #c99b4d}header h1{font-size:28px;margin:0;font-family:Georgia,serif}header p{margin:8px 0 0}.wrap{padding:16px}.kpi{display:inline-block;padding:14px;border:1px solid #bdc8d2;border-radius:7px;margin:6px 6px 12px 0;font-size:16px}h2{color:#0c2840;border-bottom:2px solid #c99b4d;padding-bottom:6px;margin-top:26px}table{border-collapse:collapse;width:100%;table-layout:fixed}td,th{padding:7px 5px;text-align:left;vertical-align:top;border-bottom:1px solid #d9e1e8;word-break:break-word}th{background:#dce6ee}.case{page-break-inside:avoid;border:1px solid #dbe5eb;border-left:3px solid #b78c4a;padding:11px;margin:9px 0}.case h3{margin:0 0 8px;font-size:13px}.case p{margin:4px 0;white-space:pre-wrap}.note{border-left:3px solid #bb934e;padding:9px;background:#f9f4e9}.printbar{position:sticky;top:0;background:#18374d;padding:9px;color:white}.printbar button{padding:10px 17px;cursor:pointer}@media print{.printbar{display:none}header{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style><div class="printbar">Documento privado: use Ctrl+P para salvar como PDF. <button onclick="print()">Imprimir / Salvar em PDF</button></div><header><div>W1 SOLUÇÕES CAPITAIS · AUDITORIA DOCUMENTAL</div><h1>Dossiê de processos e falhas</h1><p>Carteira: '+office+' &nbsp; | &nbsp; Advogado: '+lawyer+' &nbsp; | &nbsp; Emitido: '+escape(new Date().toISOString().slice(0,10))+'</p></header><main class="wrap"><div class="kpi"><b>'+count+'</b> registros</div><div class="kpi"><b>'+flagged+'</b> com apontamento</div><div class="kpi"><b>'+candidate+'</b> candidatos NUMOPEDE</div><p class="note"><b>Critério:</b> apontamento interno não é culpa comprovada. Candidato NUMOPEDE não comprova ofício expedido, recebimento ou punição. O vínculo de escritório segue os dados da carteira e pode estar em confirmação.</p><h2>Índice dos processos</h2><table><thead><tr><th style="width:23%">CNJ / Processo</th><th style="width:29%">Cliente</th><th style="width:21%">Advogado</th><th style="width:12%">Escritório</th><th style="width:15%">Apontamentos</th></tr></thead><tbody>';
+  for(const x of records.results)html+='<tr><td>'+escape(x.processo)+'</td><td>'+escape(x.cliente)+'</td><td>'+escape(arr(x.advogados).join(', '))+'</td><td>'+escape(x.escritorio)+'</td><td>'+escape(x.qtd_erros)+'</td></tr>';
+  html+='</tbody></table><h2>Apontamentos individualizados</h2>';
+  const cases=records.results.filter(x=>x.qtd_erros>0||x.numopede_status);
+  for(const x of cases){
+   let p={};try{p=JSON.parse(x.payload)}catch{}
+   const errors=Array.isArray(p.erros_detalhados)?p.erros_detalhados:[];
+   html+='<article class="case"><h3>'+escape(x.processo)+' · '+escape(x.cliente)+'</h3><p><b>Responsáveis listados:</b> '+escape(arr(x.advogados).join(', '))+'</p><p><b>Apontamentos:</b> '+escape(x.qtd_erros)+'</p>';
+   if(x.numopede_status)html+='<p><b>NUMOPEDE:</b> '+escape(x.numopede_status)+' — conferir decisão e fonte oficial.</p>';
+   if(errors.length)for(const e of errors)html+='<p><b>'+escape(e.tipo)+':</b> '+escape(e.evidencia)+'<br><b>Providência:</b> '+escape(e.providencia)+'</p>';
+   else html+='<p>'+escape(p.Erros||p['Erros registrados']||'Consultar documentos vinculados e andamento do processo.')+'</p>';
+   html+='</article>';
+  }
+  html+='<p class="note">Dados extraídos da carteira D1 no momento da emissão. O documento não substitui consulta aos autos, contraditório, análise do advogado ou confirmação oficial.</p></main></html>';
+  return new Response(html,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"}});
  }
  const params=selectedSearch(perms,u,'p'),q=String(u.searchParams.get('q')||'').trim().slice(0,150),page=positivePage(u.searchParams.get('page'));
  if(params.error)return send({error:params.error},400);
