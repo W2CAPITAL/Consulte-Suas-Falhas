@@ -1,8 +1,10 @@
 node_modules/
+.wrangler/
 .env*
 .dev.vars*
-.wrangler/
 private/
+processos_*.json
+mensagens_*.json
+_numoped_*.json
 *.pdf
 *.xlsx
-*.zip

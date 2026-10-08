@@ -1,27 +1,23 @@
-# Consulte Suas Falhas
+# Consulte Suas Falhas — W1 Soluções Capitais
 
-Gabinete jurídico privado de auditoria processual com seletor de **escritório → advogado** e duas abas exclusivas: **Todos os Processos** e **Todas as Mensagens**.
+Portal de consulta de auditoria por **escritório → advogado → forma de consulta**. Sem conta, login, senha ou administrador.
 
-## Cloudflare
-- Worker: `consulte-suas-falhas`
-- Banco privado D1: `consulte-suas-falhas-d1`
-- Autenticação própria: PBKDF2-SHA256, sessões protegidas em cookie HttpOnly+Secure+SameSite=Strict, limite de tentativas, CSRF por Origin.
-- Nenhum processo, mensagem, CPF, planilha ou PDF é enviado a este repositório público.
+## Como funciona
+A interface é publicada livremente no Cloudflare Workers. A carteira real e as mensagens dos clientes **não são disponibilizadas por uma API pública**, porque contêm informações pessoais e conversas privadas. Para consultar os dados, cada leitor autorizado carrega os arquivos `processos_1811.json` e `mensagens_20973.json` **no próprio navegador**. Os dados ficam preservados somente naquele aparelho, por IndexedDB, até serem apagados.
 
-## Inicialização
-1. Cloudflare Worker → Configurações → Variables and Secrets → criar secret `SETUP_TOKEN` (valor aleatório de pelo menos 32 caracteres).
-2. Abrir o Worker e definir primeiro usuário e senha (mínimo 16 caracteres) usando esse token.
-3. Baixar os arquivos `processos_1811.json` e `mensagens_20973.json` disponibilizados separadamente, fora do GitHub.
-4. Após login, abrir **Importar carteira completa** e enviar os dois arquivos. O envio é parcelado e pode ser repetido sem duplicar.
-5. Ao fim, a aba **Todos os Processos** terá 1.811 linhas históricas e **Todas as Mensagens** terá 20.973 registros quando a importação estiver completa.
+Seletores: GM, HUGS, JVA, todos, vínculo a confirmar. As mensagens com Bruna pertencem ao contexto **JVA**. O vínculo de muitos processos ainda está identificado como **VINCULO A CONFIRMAR**, e não deve ser atribuído por hipótese.
 
-## Regras de auditoria
-- Bruna Solla pertence ao contexto JVA, apesar do nome original do arquivo.
-- Os registros sem escritório individual comprovado ficam em **VINCULO A CONFIRMAR**; não confundir JVA/GM ou HUGS assumido por GM.
-- Das 20.973 mensagens, muitas não contêm CNJ e ficam acessíveis na consulta **Todas as conversas autorizadas**, sem vinculação artificial.
-- No detalhe do processo são preservados os erros individualizados da fonte anterior, providências, evidências e anotações.
-- A pesquisa no Diário/DJEN pode ser aberta por processo, porém não significa que o scanner NUMOPEDE tenha concluído consulta pública.
-- As credenciais nunca devem ser inseridas no GitHub ou em planilhas.
+Modos: resumo rápido, todos os processos, todas as mensagens (inclusive sem CNJ), erros individualizados, ranking de atribuições, menções NUMOPEDE/OAB, PDF (impressão e arquivos locais) e reprodução de vídeo local.
 
-## Escopo desta versão
-Consulta e importação privada implementadas. Não inclui integração automática ativa com DataJud ou WA.Auto e não transforma atributos internos de erro em conclusão de culpa profissional.
+Nenhuma ocorrência de NUMOPEDE deve ser interpretada como denúncia, ofício expedido ou punição sem prova específica. As atribuições da planilha não equivalem a culpa profissional judicialmente reconhecida.
+
+## Deploy
+```bash
+npm install
+npx wrangler deploy
+```
+Os módulos de Worker são `src/worker.js`, `src/page.js` e `src/ui.js`. Não são necessários bindings D1, R2, variáveis ou secrets. Os bancos D1 de testes anteriores não são utilizados neste modo.
+
+**Atenção:** qualquer pessoa que tiver uma cópia dos JSONs poderá abrir a carteira no próprio navegador. Não envie esses arquivos para um repositório público. Em aparelhos compartilhados, clique em **Apagar deste aparelho**.
+
+© 2026 W1 Soluções Capitais — por Davi Alves. Todos os direitos reservados.
