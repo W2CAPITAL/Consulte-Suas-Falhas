@@ -86,7 +86,7 @@ async function serve(req,env){
   if(scope==='todas'){if(user.role!=='admin')return j({error:'Consulta integral restrita ao administrador'},403)}
   else{
    const sub=[],p=[];
-   if(comp!=='TODOS'){sub.push('m.office=?');p.push(comp)}
+   if(comp!=='TODOS'&&law==='TODOS'){sub.push('m.office=?');p.push(comp)}
    const pcs=['l.message_id=m.message_id'];
    if(comp!=='TODOS'){pcs.push('p.escritorio=?');p.push(comp)}
    if(law!=='TODOS'){pcs.push('UPPER(p.advogados) LIKE ?');p.push('%'+norm(law)+'%')}
