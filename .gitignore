@@ -8,3 +8,6 @@ mensagens_*.json
 _numoped_*.json
 *.pdf
 *.xlsx
+
+__pycache__/
+*.pyc

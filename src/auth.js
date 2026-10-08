@@ -109,7 +109,7 @@ export async function authRequest(req,env){
   if(!b||typeof b.username!=='string'||!/^[a-zA-Z0-9_.-]{3,70}$/.test(b.username))return res({error:'Usuário inválido'},400);
   const companies=Array.isArray(b.companies)?[...new Set(b.companies)]:[];
   const lawyers=Array.isArray(b.lawyers)?[...new Set(b.lawyers)]:[];
-  const validCompanies=['*','GM','JVA','HUGS','VINCULO A CONFIRMAR'];
+  const validCompanies=['*','GM','JVA','HUGS','JVA / HUGS'];
   const validLawyers=['*','MATHEUS','ANDRESSA','ERALDO','MAIKON','GILBERTO','ISAI','FABIO'];
   if(path!=='/api/auth/users/delete'&&(!['admin','viewer'].includes(b.role)||companies.some(x=>!validCompanies.includes(x))||lawyers.some(x=>!validLawyers.includes(x))))return res({error:'Escopo ou função inválida'},400);
   if(path==='/api/auth/users'){
