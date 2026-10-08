@@ -1,3 +1,8 @@
 name = "consulte-suas-falhas"
 main = "src/worker.js"
 compatibility_date = "2026-10-08"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "consulte-suas-falhas-d1"
+database_id = "f893e90f-8e85-4e96-aecd-c78403539a69"

@@ -1,23 +1,13 @@
-# Consulte Suas Falhas — W1 Soluções Capitais
+# Consulte Suas Falhas
 
-Portal de consulta de auditoria por **escritório → advogado → forma de consulta**. Sem conta, login, senha ou administrador.
+Consulta centralizada por escritório e advogado. O visitante **não importa arquivos** e o aplicativo **não possui login ou senha próprios**.
 
-## Como funciona
-A interface é publicada livremente no Cloudflare Workers. A carteira real e as mensagens dos clientes **não são disponibilizadas por uma API pública**, porque contêm informações pessoais e conversas privadas. Para consultar os dados, cada leitor autorizado carrega os arquivos `processos_1811.json` e `mensagens_20973.json` **no próprio navegador**. Os dados ficam preservados somente naquele aparelho, por IndexedDB, até serem apagados.
+O backend utiliza Cloudflare D1. `/api/summary` publica apenas totais; processos e mensagens completos exigem autorização externa via Cloudflare Access porque incluem dados pessoais e conversas privadas.
 
-Seletores: GM, HUGS, JVA, todos, vínculo a confirmar. As mensagens com Bruna pertencem ao contexto **JVA**. O vínculo de muitos processos ainda está identificado como **VINCULO A CONFIRMAR**, e não deve ser atribuído por hipótese.
+O banco precisa receber uma **sincronização única** de `processos_1811.json` e `mensagens_20973.json`, fora do GitHub. Depois disso, todos os dispositivos consultam automaticamente a mesma carteira. Nenhum arquivo privado deve ser colocado no repositório público.
 
-Modos: resumo rápido, todos os processos, todas as mensagens (inclusive sem CNJ), erros individualizados, ranking de atribuições, menções NUMOPEDE/OAB, PDF (impressão e arquivos locais) e reprodução de vídeo local.
+Cloudflare Worker: `consulte-suas-falhas`; banco: `consulte-suas-falhas-d1`. Configurar `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` e `USER_SCOPES_JSON` após habilitar Cloudflare Access.
 
-Nenhuma ocorrência de NUMOPEDE deve ser interpretada como denúncia, ofício expedido ou punição sem prova específica. As atribuições da planilha não equivalem a culpa profissional judicialmente reconhecida.
+O sistema não afirma que referências genéricas a NUMOPEDE sejam ofícios comprovados ou que apontamentos internos constituam culpa definitiva.
 
-## Deploy
-```bash
-npm install
-npx wrangler deploy
-```
-Os módulos de Worker são `src/worker.js`, `src/page.js` e `src/ui.js`. Não são necessários bindings D1, R2, variáveis ou secrets. Os bancos D1 de testes anteriores não são utilizados neste modo.
-
-**Atenção:** qualquer pessoa que tiver uma cópia dos JSONs poderá abrir a carteira no próprio navegador. Não envie esses arquivos para um repositório público. Em aparelhos compartilhados, clique em **Apagar deste aparelho**.
-
-© 2026 W1 Soluções Capitais — por Davi Alves. Todos os direitos reservados.
+© 2026 W1 Soluções Capitais — por Davi Alves.
