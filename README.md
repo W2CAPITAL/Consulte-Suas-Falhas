@@ -39,3 +39,7 @@ Este repositório não armazena processos, PDFs, mensagens ou cópias dos arquiv
 As atribuições de erros na auditoria não são conclusão de culpa jurídica; referências ao NUMOPEDE/OAB não são equivalentes a sanções sem comprovação específica.
 
 © 2026 W1 Soluções Capitais — por Davi Alves. Todos os direitos reservados.
+
+
+## Verificação
+Diagnóstico em andamento para a rota de autenticação no Cloudflare gratuito.
